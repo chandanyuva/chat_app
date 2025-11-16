@@ -27,17 +27,9 @@ function App() {
   }
   const [selectedChatId, setSelectedChatId] = useState("room1");
   const [messages, setMessages] = useState({
-    room1: [
-      { message: "hi", senderId: makeId(), timestamp: Date.now() },
-      { message: "hello", senderId: makeId(), timestamp: Date.now() }
-    ],
-    room2: [
-      { message: "bye", senderId: makeId(), timestamp: Date.now() },
-      { message: "jahc", senderId: makeId(), timestamp: Date.now() }
-    ],
-    room3: [
-      { message: "jncjbzc", senderId: makeId(), timestamp: Date.now() }
-    ]
+    room1: [],
+    room2: [],
+    room3: []
   });
 
   const [socket, setSocket] = useState(null);
@@ -57,6 +49,19 @@ function App() {
         return {
           ...prev,
           [roomId]: [...prev[roomId], { message, senderId, timestamp }]
+        }
+      })
+    })
+    newSocket.on("room_history", (history) => {
+      if (history.length === 0) return;
+      const roomId = history[0].roomId;
+
+      console.log("HISTORY RECEIVED:", history);
+
+      setMessages((prev) => {
+        return {
+          ...prev,
+          [roomId]: history
         }
       })
     })

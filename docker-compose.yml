@@ -1,5 +1,5 @@
 services:
-  mongo:
+  mongo: #use "docker exec -it mongo mongosh" to enter into mongosh
     image: mongo:latest
     container_name: mongo
     restart: always
@@ -7,6 +7,15 @@ services:
       - "27017:27017"
     volumes:
       - mongo_data:/data/db
+
+  backend:
+    build: ./backend
+    container_name: backend
+    restart: always
+    ports:
+      - "3000:3000"
+    depends_on:
+      - mongo
 
 volumes:
   mongo_data:

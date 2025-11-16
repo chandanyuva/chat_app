@@ -2,8 +2,9 @@ const express = require('express');
 const http = require('http');
 const { Server } = require("socket.io");
 const cors = require("cors");
-
 const connectDB = require("./db");
+const Message = require("./models/message.js");
+
 connectDB();
 
 const ExpressApp = express();
@@ -28,16 +29,29 @@ const io = new Server(mainServer, {
 
 io.on("connection", (socket) => {
   console.log('a user connected');
-  socket.on("join_room", (roomId) => {
+  socket.on("join_room", async (roomId) => {
     socket.join(roomId);
     console.log("joined: ", roomId);
+
+    const history = await Message.find({ roomId }).sort({ timestamp: -1 }).limit(50);
+    history.reverse();
+    // console.log(history);
+    socket.emit("room_history", history);
+    // console.log(roomId, ": RoomHistroy fetched")
   })
-  socket.on('chat_message', ({ roomId, message, senderId }) => {
+  socket.on('chat_message', async ({ roomId, message, senderId }) => {
+    const serverTime = Date.now();
+    await Message.create({
+      roomId,
+      message,
+      senderId,
+      timestamp: serverTime
+    });
     io.to(roomId).emit('chat_message', {
       roomId,
       message,
       senderId,
-      timestamp: Date.now()
+      timestamp: serverTime
     });
     console.log("incomming: ", roomId, message, senderId);
   });

@@ -9,7 +9,7 @@ function ChatWindow({ socket, chatId, messages, setMessages, uid }) {
     socket.emit("chat_message", {
       roomId: chatId,
       message: text,
-      senderId: uid
+      senderId: uid,
     })
     setText("");
   }
@@ -25,7 +25,7 @@ function ChatWindow({ socket, chatId, messages, setMessages, uid }) {
   return <div className="chatwindow">
     <div className="messages-area">
       {messages[chatId].map(({ message, senderId, timestamp }, index) => {
-        console.log(message, senderId, timestamp);
+        {/* console.log(message, senderId, timestamp); */ }
         const isMe = senderId === uid;
         return (<div
           key={index}
