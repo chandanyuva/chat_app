@@ -56,7 +56,7 @@ function App() {
       if (history.length === 0) return;
       const roomId = history[0].roomId;
 
-      console.log("HISTORY RECEIVED:", history);
+      // console.log("HISTORY RECEIVED:", history);
 
       setMessages((prev) => {
         return {

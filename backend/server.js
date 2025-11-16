@@ -10,8 +10,13 @@ connectDB();
 const ExpressApp = express();
 const PORT = 3000;
 
+const allowedOrigins = [
+  "http://localhost:5173",
+  "http://frontend:5173"
+];
+
 ExpressApp.use(cors({
-  origin: "http://localhost:5173",
+  origin: allowedOrigins,
 }))
 
 const mainServer = http.createServer(ExpressApp);
@@ -22,7 +27,7 @@ ExpressApp.get("/", (req, res) => {
 
 const io = new Server(mainServer, {
   cors: {
-    origin: "http://localhost:5173",
+    origin: allowedOrigins,
     methods: ["GET", "POST"],
   }
 });
