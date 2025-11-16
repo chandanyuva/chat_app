@@ -1,6 +1,5 @@
 function SidebarItem({ id, name, isSelected, onSelectChat }) {
-  const style = isSelected ? { fontWeight: "bold" } : {};
-  return <div onClick={() => { onSelectChat(id) }} style={style}>
+  return <div className={`sidebar-item ${isSelected ? "selected" : ""}`} onClick={() => { onSelectChat(id) }}>
     {name}
   </div>
 }
