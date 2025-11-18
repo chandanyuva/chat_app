@@ -3,7 +3,8 @@ const http = require('http');
 const { Server } = require("socket.io");
 const cors = require("cors");
 const connectDB = require("./db");
-const Message = require("./models/message.js");
+const Message = require("./models/Message.js");
+const Room = require("./models/Room.js");
 
 connectDB();
 
@@ -24,6 +25,22 @@ const mainServer = http.createServer(ExpressApp);
 ExpressApp.get("/", (req, res) => {
   res.send("Hello, world!")
 })
+
+// temp remove after initial room seeding
+ExpressApp.get("/seed-rooms", async (req, res) => {
+  await Room.deleteMany({});
+  const rooms = await Room.insertMany([
+    { name: "Alice" },
+    { name: "Bob" },
+    { name: "Yuva" },
+  ]);
+  res.json(rooms);
+});
+
+ExpressApp.get("/rooms", async (req, res) => {
+  const rooms = await Room.find({});
+  res.json(rooms);
+});
 
 const io = new Server(mainServer, {
   cors: {

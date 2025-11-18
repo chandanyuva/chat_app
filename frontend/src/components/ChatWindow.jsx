@@ -24,7 +24,7 @@ function ChatWindow({ socket, chatId, messages, setMessages, uid }) {
   const [text, setText] = useState("")
   return <div className="chatwindow">
     <div className="messages-area">
-      {messages[chatId].map(({ message, senderId, timestamp }, index) => {
+      {messages[chatId] ? (messages[chatId].map(({ message, senderId, timestamp }, index) => {
         {/* console.log(message, senderId, timestamp); */ }
         const isMe = senderId === uid;
         return (<div
@@ -34,7 +34,7 @@ function ChatWindow({ socket, chatId, messages, setMessages, uid }) {
           <div>{message}</div>
           <div className="timestamp">{formatTime(timestamp)}</div>
         </div>)
-      })}
+      })) : (<div>Loading...</div>)}
       <div ref={bottomRef}></div>
     </div>
     <div className="input-area">

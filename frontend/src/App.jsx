@@ -17,31 +17,41 @@ function App() {
     }
     setUid(uid);
   }, [])
-  const [chatList, setChatList] = useState([
-    { id: "room1", name: "Alice" },
-    { id: "room2", name: "Bob" },
-    { id: "room3", name: "Yuva" },
-  ]);
+  const [selectedChatId, setSelectedChatId] = useState("");
+  const [loadingRooms, setLoadingRooms] = useState(true);
+  const [chatList, setChatList] = useState([]);
+  useEffect(() => {
+    fetch("http://localhost:3000/rooms").then(res => res.json()).then(data => {
+      setChatList(data);
+      setLoadingRooms(false);
+      if (data.length > 0) setSelectedChatId(data[0]._id);
+    })
+  }, [])
   function makeId() {
     return crypto.randomUUID();
   }
-  const [selectedChatId, setSelectedChatId] = useState("room1");
-  const [messages, setMessages] = useState({
-    room1: [],
-    room2: [],
-    room3: []
-  });
+  const [messages, setMessages] = useState({});
+  useEffect(() => {
+    // console.log(chatList);
+    if (chatList.length > 0) {
+      const initial_messages = {};
+      chatList.forEach((room) => {
+        initial_messages[room._id] = [];
+      });
+      setMessages(initial_messages);
+    }
+  }, [chatList])
 
   const [socket, setSocket] = useState(null);
 
   useEffect(() => {
     const newSocket = io("http://localhost:3000/");
-    console.log(newSocket);
+    // console.log(newSocket);
     setSocket(newSocket);
-    console.log("connected to socket");
+    // console.log("connected to socket");
     chatList.forEach((room) => {
-      newSocket.emit("join_room", room.id);
-      console.log("joining room;", room.id);
+      newSocket.emit("join_room", room._id);
+      // console.log("joining room;", room._id);
     })
     newSocket.on("chat_message", ({ roomId, message, senderId, timestamp }) => {
       console.log("incomming :", roomId, message, senderId, timestamp);
@@ -76,8 +86,10 @@ function App() {
   };
   return (
     <div className="app-container">
-      <SideBar chatList={chatList} selectedChatId={selectedChatId} onSelectChat={onSelectChatHandler} />
-      <ChatWindow socket={socket} chatId={selectedChatId} messages={messages} setmessages={setMessages} uid={uid} />
+      {loadingRooms ? <div>Loading...</div> : <SideBar chatList={chatList} selectedChatId={selectedChatId} onSelectChat={onSelectChatHandler} />}
+      {setSelectedChatId && messages[setSelectedChatId] ? (<div>Loading...</div>) : (
+        <ChatWindow socket={socket} chatId={selectedChatId} messages={messages} setmessages={setMessages} uid={uid} />
+      )}
     </div>
   )
 }
