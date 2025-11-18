@@ -89,3 +89,51 @@ main components
 ```
 
 * using socket.io-client
+
+
+# Basic architecture
+
+## MongoDB running in Docker
+* Persistent volume
+* Accessible to backend via hostname mongo
+
+## Backend running in Docker
+* Connected to MongoDB through internal DNS
+* Exposes port 3000
+* Works with socket.io
+* Saves messages
+* Loads history
+* Uses correct CORS rules
+
+## Frontend running in Docker
+* Built with Vite
+* Served via nginx
+* Talks to backend using hostname backend
+* Uses proper CORS origin (frontend:5173)
+* Works in real time
+* Auto-scrolls
+* Loads history on room join
+
+## Docker Compose orchestration
+* All 3 containers run together automatically:
+
+```
+docker compose up -d --build
+```
+
+## System's Internal Network Diagram
+
+### Inside Docker:
+
+frontend (nginx)
+   ↓       hostname: frontend
+backend (node + socket.io)
+   ↓       hostname: backend
+mongo (mongodb)
+
+
+### External access (browser):
+
+localhost:5173 → frontend
+localhost:3000 → backend (if you open manually)
+localhost:27017 → mongo (if using compass, etc)
