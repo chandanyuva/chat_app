@@ -2,6 +2,7 @@ const express = require('express');
 const http = require('http');
 const { Server } = require("socket.io");
 const cors = require("cors");
+const jwt = require("jsonwebtoken");
 const connectDB = require("./db");
 const Message = require("./models/Message.js");
 const Room = require("./models/Room.js");
@@ -19,8 +20,11 @@ const allowedOrigins = [
 ExpressApp.use(cors({
   origin: allowedOrigins,
 }))
+ExpressApp.use(express.json());
 
 const mainServer = http.createServer(ExpressApp);
+
+ExpressApp.use("/auth", require("./routes/auth.js"));
 
 ExpressApp.get("/", (req, res) => {
   res.send("Hello, world!")
@@ -48,6 +52,19 @@ const io = new Server(mainServer, {
     methods: ["GET", "POST"],
   }
 });
+
+io.use((socket, next) => {
+  const token = socket.handshake.auth.token;
+  if (!token) return next(new Error("No token provided"));
+
+  try {
+    const user = jwt.verify(token, process.env.JWT_SECRET || "devsecret");
+    socket.user = user;
+    next();
+  } catch (err) {
+    return next(new Error("Invaild token"));
+  }
+})
 
 io.on("connection", (socket) => {
   console.log('a user connected');
