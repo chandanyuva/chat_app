@@ -1,0 +1,20 @@
+services:
+  mongo:
+    image: mongo:latest
+    container_name: chat_mongo
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_data:/data/db
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+volumes:
+  mongo_data:
+# start mongo : docker compose -f docker-compose.dev.yml up -d
+# stop mongo : docker compose -f docker-compose.dev.yml down
+# Delete Mongo + Data (full reset) : docker compose -f docker-compose.dev.yml down -v
