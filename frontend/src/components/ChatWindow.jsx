@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 
-function ChatWindow({ socket, chatId, messages, setMessages, uid }) {
+function ChatWindow({ socket, chatId, messages, setMessages, userId }) {
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages[chatId]]);
@@ -9,7 +9,7 @@ function ChatWindow({ socket, chatId, messages, setMessages, uid }) {
     socket.emit("chat_message", {
       roomId: chatId,
       message: text,
-      senderId: uid,
+      senderId: userId,
     })
     setText("");
   }
@@ -26,7 +26,7 @@ function ChatWindow({ socket, chatId, messages, setMessages, uid }) {
     <div className="messages-area">
       {messages[chatId] ? (messages[chatId].map(({ message, senderId, timestamp }, index) => {
         {/* console.log(message, senderId, timestamp); */ }
-        const isMe = senderId === uid;
+        const isMe = senderId === userId;
         return (<div
           key={index}
           className={`message-bubble ${isMe ? "outgoing" : "incoming"}`}

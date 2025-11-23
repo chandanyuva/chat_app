@@ -9,10 +9,10 @@ const JWT_EXPIRES_IN = "5h";
 
 //signup
 authRouter.post("/signup", async (req, res) => {
-  console.log(req.body);
-  const { email, userName, password } = req.body;
+  console.log("inside Auth", req.body);
+  const { email, username, password } = req.body;
 
-  if (!email || !userName || !password) {
+  if (!email || !username || !password) {
     return res.status(400).json({ error: "All fields required" });
   }
   if (password.lenght < 6) {
@@ -25,8 +25,8 @@ authRouter.post("/signup", async (req, res) => {
       return res.status(400).json({ error: "Email already in use" });
     }
     //check username
-    const userNameExists = await User.findOne({ userName });
-    if (userNameExists) {
+    const usernameExists = await User.findOne({ username: username });
+    if (usernameExists) {
       return res.status(400).json({ error: "Username taken" });
     }
     //hash password
@@ -34,14 +34,14 @@ authRouter.post("/signup", async (req, res) => {
 
     const user = await User.create({
       email,
-      userName,
+      username,
       passwordHash,
     });
 
     const token = jwt.sign(
       {
         userid: user._id,
-        userName: user.userName,
+        username: user.username,
         email: user.email
       },
       JWT_SECRET,
@@ -53,7 +53,7 @@ authRouter.post("/signup", async (req, res) => {
       user: {
         id: user._id,
         email: user.email,
-        userName: user.userName,
+        username: user.username,
       }
     });
   } catch (err) {
@@ -81,7 +81,7 @@ authRouter.post("/login", async (req, res) => {
     const token = jwt.sign(
       {
         userid: user._id,
-        userName: user.userName,
+        username: user.username,
         email: user.email,
       },
       JWT_SECRET,
@@ -92,7 +92,7 @@ authRouter.post("/login", async (req, res) => {
       user: {
         id: user._id,
         email: user.email,
-        userName: user.userName,
+        username: user.username,
       }
     });
   } catch (err) {

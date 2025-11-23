@@ -7,7 +7,7 @@ const UserSchema = new mongoose.Schema({
     unique: true,
     lowercase: true,
   },
-  userName: {
+  username: {
     type: String,
     required: true,
     unique: true,

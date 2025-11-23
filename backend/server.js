@@ -92,7 +92,7 @@ io.on("connection", (socket) => {
       senderId,
       timestamp: serverTime
     });
-    console.log("incomming: ", roomId, message, senderId);
+    console.log("incomming: ", serverTime, roomId, senderId, message);
   });
   socket.on("disconnect", (msg) => {
     console.log("user disconnected", msg);
