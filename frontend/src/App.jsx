@@ -11,7 +11,6 @@ const BACKEND_URL = "http://localhost:3000"
 function App() {
 
   // States
-  // const [uid, setUid] = useState(null); // TODO remove
   const [selectedChatId, setSelectedChatId] = useState("");
   const [loadingRooms, setLoadingRooms] = useState(true);
   const [chatList, setChatList] = useState([]);
@@ -62,27 +61,55 @@ function App() {
 
   }, [token]);
 
-  // local userid // TODO remove
+  // Rooms from db
   // useEffect(() => {
-  //   let uid = localStorage.getItem("uid");
-  //   if (!uid) {
-  //     uid = "user_" + Math.random().toString(36).slice(2);
-  //     localStorage.setItem("uid", uid);
-  //   }
-  //   setUid(uid);
+  //   fetch(`${BACKEND_URL}/rooms`).then(res => res.json()).then(data => {
+  //     setChatList(data);
+  //     setLoadingRooms(false);
+  //     if (data.length > 0) setSelectedChatId(data[0]._id);
+  //   })
   // }, [])
 
-  // Rooms from db
+  // Rooms from db only after user login
   useEffect(() => {
-    fetch(`${BACKEND_URL}/rooms`).then(res => res.json()).then(data => {
-      setChatList(data);
-      setLoadingRooms(false);
-      if (data.length > 0) setSelectedChatId(data[0]._id);
+    if (!user) return;
+
+    async function loadRooms() {
+      try {
+        const res = fetch(`${BACKEND_URL}/rooms`, {
+          headers: {
+            "Authorization": `Bearer ${token}`
+          }
+        });
+        console.log(res);
+        const data = await res.json();
+        console.log(res);
+        if (res.ok) {
+          setChatList(data.rooms);
+          setLoadingRooms(false);
+          if (data.rooms.length > 0) {
+            setSelectedChatId(data.rooms[0]._id);
+          } else {
+            console.warn("Rooms list empty");
+          }
+        } else {
+          console.error("Room Load Error:", data.error);
+        }
+      } catch (err) {
+        console.error("Failed to fetch Rooms: ", err);
+      }
+    }
+    loadRooms();
+  }, [user]);
+
+  // Join rooms only after chatList is ready
+  useEffect(() => {
+    if (!socket || chatList.length === 0) return;
+
+    chatList.forEach(room => {
+      socket.emit("join_room", room.roomId);
     })
-  }, [])
-  // function makeId() {
-  //   return crypto.randomUUID();
-  // }
+  }, [socket, chatList])
 
   // Messages
   useEffect(() => {
