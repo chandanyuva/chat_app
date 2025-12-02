@@ -11,7 +11,7 @@ const BACKEND_URL = "http://localhost:3000"
 function App() {
 
   // States
-  const [uid, setUid] = useState(null);
+  // const [uid, setUid] = useState(null); // TODO remove
   const [selectedChatId, setSelectedChatId] = useState("");
   const [loadingRooms, setLoadingRooms] = useState(true);
   const [chatList, setChatList] = useState([]);
@@ -62,15 +62,15 @@ function App() {
 
   }, [token]);
 
-  // local userid
-  useEffect(() => {
-    let uid = localStorage.getItem("uid");
-    if (!uid) {
-      uid = "user_" + Math.random().toString(36).slice(2);
-      localStorage.setItem("uid", uid);
-    }
-    setUid(uid);
-  }, [])
+  // local userid // TODO remove
+  // useEffect(() => {
+  //   let uid = localStorage.getItem("uid");
+  //   if (!uid) {
+  //     uid = "user_" + Math.random().toString(36).slice(2);
+  //     localStorage.setItem("uid", uid);
+  //   }
+  //   setUid(uid);
+  // }, [])
 
   // Rooms from db
   useEffect(() => {
@@ -138,7 +138,7 @@ function App() {
   // Helper Functions
   // selected Chat Handler
   function onSelectChatHandler(id) {
-    console.log(`clicked on ${id}`);
+    // console.log(`clicked on ${id}`);
     setSelectedChatId(id);
   };
 
