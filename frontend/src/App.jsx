@@ -76,19 +76,18 @@ function App() {
 
     async function loadRooms() {
       try {
-        const res = fetch(`${BACKEND_URL}/rooms`, {
+        const res = await fetch(`${BACKEND_URL}/rooms`, {
           headers: {
             "Authorization": `Bearer ${token}`
           }
         });
-        console.log(res);
         const data = await res.json();
-        console.log(res);
+        // console.log(data);
         if (res.ok) {
-          setChatList(data.rooms);
+          setChatList(data);
           setLoadingRooms(false);
-          if (data.rooms.length > 0) {
-            setSelectedChatId(data.rooms[0]._id);
+          if (data.length > 0) {
+            setSelectedChatId(data[0]._id);
           } else {
             console.warn("Rooms list empty");
           }
@@ -107,7 +106,7 @@ function App() {
     if (!socket || chatList.length === 0) return;
 
     chatList.forEach(room => {
-      socket.emit("join_room", room.roomId);
+      socket.emit("join_room", room._id);
     })
   }, [socket, chatList])
 

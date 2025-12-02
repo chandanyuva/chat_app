@@ -4,7 +4,7 @@ import SidebarItem from "./SidebarItem";
 
 function Sidebar({ chatList, selectedChatId, onSelectChat }) {
   // console.log("chatList in Sidebar:", chatList);
-  if (chatList.lenght === 0) {
+  if (!chatList || chatList.length === 0) {
     return <div>No Rooms Found.</div>
   }
   return <div className="sidebar">
