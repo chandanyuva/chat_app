@@ -7,7 +7,6 @@ const connectDB = require("./db");
 const Message = require("./models/Message.js");
 const Room = require("./models/Room.js");
 
-connectDB();
 
 const ExpressApp = express();
 const PORT = 3000;
@@ -15,13 +14,15 @@ const PORT = 3000;
 const allowedOrigins = [
   "http://localhost:5173",
   "http://frontend:5173",
-  "http://192.168.1.155:5173" // only for remote dev
+  "http://192.168.1.102:5173" // only for remote dev
 ];
 
 ExpressApp.use(cors({
   origin: allowedOrigins,
 }))
 ExpressApp.use(express.json());
+
+connectDB();
 
 const mainServer = http.createServer(ExpressApp);
 
