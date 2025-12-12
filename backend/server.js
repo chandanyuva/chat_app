@@ -14,7 +14,8 @@ const PORT = 3000;
 
 const allowedOrigins = [
   "http://localhost:5173",
-  "http://frontend:5173"
+  "http://frontend:5173",
+  "http://192.168.1.155:5173" // only for remote dev
 ];
 
 ExpressApp.use(cors({
