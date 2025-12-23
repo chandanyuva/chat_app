@@ -14,7 +14,7 @@ const PORT = 3000;
 const allowedOrigins = [
   "http://localhost:5173",
   "http://frontend:5173",
-  "http://192.168.1.102:5173" // only for remote dev
+  // "http://192.168.1.102:5173" // only for remote dev
 ];
 
 ExpressApp.use(cors({
@@ -32,6 +32,8 @@ ExpressApp.get("/", (req, res) => {
   res.send("Hello, world!")
 })
 
+// needs to be done atleast once on new mongo containers
+// use this route to seed initial rooms in the db 
 // temp remove after initial room seeding
 ExpressApp.get("/seed-rooms", async (req, res) => {
   await Room.deleteMany({});
