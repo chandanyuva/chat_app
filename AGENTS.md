@@ -21,3 +21,12 @@
 - **General**:
   - **Naming**: camelCase for vars/functions, PascalCase for Components/Models.
   - **Paths**: Use absolute paths or `workdir` when running commands.
+
+## Project Architecture & Data
+- **Database**: MongoDB
+  - Connection URI: `mongodb://localhost:27017/chatapp` (for local dev)
+  - Behavior: Lazy creation (database is created on first write).
+- **Seeding**:
+  - Route: `POST /seed-rooms` (defined in `backend/server.js`)
+  - Purpose: Populates initial chat rooms.
+- **Real-time**: Socket.io used for chat functionality.
