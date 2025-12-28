@@ -22,8 +22,8 @@ graph TD
     Sidebar -->|id, name, isSelected, onSelectChat| SidebarItem[SidebarItem.jsx]
 
     Content -->|socket, chatId, messages, userId| Chat[ChatWindow.jsx]
-    Chat -->|messages[chatId]| MessageList[Messages Area]
-    Chat -->|socket.emit('chat_message')| Input[Input Area]
+    Chat -->|messages for chatId| MessageList[Messages Area]
+    Chat -->|socket.emit chat_message| Input[Input Area]
 ```
 
 ## Component Details
