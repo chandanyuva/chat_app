@@ -17,16 +17,30 @@ const allowedOrigins = [
   // "http://192.168.1.102:5173" // only for remote dev
 ];
 
-ExpressApp.use(cors({
-  origin: allowedOrigins,
-}))
-ExpressApp.use(express.json());
-
 connectDB();
 
 const mainServer = http.createServer(ExpressApp);
 
+const io = new Server(mainServer, {
+  cors: {
+    origin: allowedOrigins,
+    methods: ["GET", "POST"],
+  }
+});
+
+ExpressApp.use(cors({
+  origin: allowedOrigins,
+}));
+ExpressApp.use(express.json());
+
+// Attach io to request to be used in routes
+ExpressApp.use((req, res, next) => {
+  req.io = io;
+  next();
+});
+
 ExpressApp.use("/auth", require("./routes/auth.js"));
+ExpressApp.use("/rooms", require("./routes/rooms.js"));
 
 ExpressApp.get("/", (req, res) => {
   res.send("Hello, world!")
@@ -43,18 +57,6 @@ ExpressApp.get("/seed-rooms", async (req, res) => {
     { name: "Yuva" },
   ]);
   res.json(rooms);
-});
-
-ExpressApp.get("/rooms", async (req, res) => {
-  const rooms = await Room.find({});
-  res.json(rooms);
-});
-
-const io = new Server(mainServer, {
-  cors: {
-    origin: allowedOrigins,
-    methods: ["GET", "POST"],
-  }
 });
 
 io.use((socket, next) => {
