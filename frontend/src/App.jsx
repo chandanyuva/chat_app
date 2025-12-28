@@ -141,10 +141,16 @@ function App() {
       setMessages((prev) => {
         return {
           ...prev,
-          [roomId]: [...prev[roomId], { message, senderId, timestamp }]
+          [roomId]: [...(prev[roomId] || []), { message, senderId, timestamp }]
         }
       })
     })
+
+    newSocket.on("room_created", (newRoom) => {
+      console.log("New room created:", newRoom);
+      setChatList((prev) => [...prev, newRoom]);
+    });
+
     newSocket.on("room_history", (history) => {
       if (history.length === 0) return;
       const roomId = history[0].roomId;
@@ -207,6 +213,30 @@ function App() {
     }
   }
 
+  // Create Room Handler
+  async function handleCreateRoom(roomName) {
+    if (!token) return;
+    try {
+      const res = await fetch(`${BACKEND_URL}/rooms`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`
+        },
+        body: JSON.stringify({ name: roomName })
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        alert(data.error || "Failed to create room");
+      }
+      // Note: We don't need to manually update chatList here because 
+      // the socket "room_created" event will handle it for everyone.
+    } catch (err) {
+      console.error("Create Room Error:", err);
+      alert("Error creating room");
+    }
+  }
+
   // LogOut Handler
   function handleLogout() {
     localStorage.removeItem("token");
@@ -256,7 +286,7 @@ function App() {
           </div>
         </div>
         <div className="main-content">
-          {loadingRooms ? <div>Loading...</div> : <SideBar chatList={chatList} selectedChatId={selectedChatId} onSelectChat={onSelectChatHandler} />}
+          {loadingRooms ? <div>Loading...</div> : <SideBar chatList={chatList} selectedChatId={selectedChatId} onSelectChat={onSelectChatHandler} onCreateRoom={handleCreateRoom} />}
           {setSelectedChatId && messages[setSelectedChatId] ? (<div>Loading...</div>) : (
             <ChatWindow socket={socket} chatId={selectedChatId} messages={messages} setmessages={setMessages} userId={user.userid} />
           )}
