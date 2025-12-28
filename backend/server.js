@@ -78,7 +78,10 @@ io.on("connection", (socket) => {
     socket.join(roomId);
     console.log("joined: ", roomId);
 
-    const history = await Message.find({ roomId }).sort({ timestamp: -1 }).limit(50);
+    const history = await Message.find({ roomId })
+      .sort({ timestamp: -1 })
+      .limit(50)
+      .populate("senderId", "username"); // Populate username from User model
     history.reverse();
     // console.log(history);
     socket.emit("room_history", history);
@@ -95,7 +98,10 @@ io.on("connection", (socket) => {
     io.to(roomId).emit('chat_message', {
       roomId,
       message,
-      senderId,
+      senderId: {
+        _id: senderId,
+        username: socket.user.username // Send username from socket session
+      },
       timestamp: serverTime
     });
     console.log("incomming: ", serverTime, roomId, senderId, message);
