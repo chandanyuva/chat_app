@@ -26,14 +26,21 @@ function ChatWindow({ socket, chatId, messages, setMessages, userId }) {
     <div className="messages-area">
       {messages[chatId] ? (messages[chatId].map(({ message, senderId, timestamp }, index) => {
         {/* console.log(message, senderId, timestamp); */ }
-        const isMe = senderId === userId;
-        return (<div
-          key={index}
-          className={`message-bubble ${isMe ? "outgoing" : "incoming"}`}
-        >
-          <div>{message}</div>
-          <div className="timestamp">{formatTime(timestamp)}</div>
-        </div>)
+        const senderIdStr = typeof senderId === 'object' ? senderId?._id : senderId;
+        const isMe = senderIdStr === userId;
+        const senderName = typeof senderId === 'object' ? senderId?.username : "Unknown";
+
+        return (
+          <div key={index} className="message-wrapper">
+            {!isMe && <div className="sender-name">{senderName}</div>}
+            <div
+              className={`message-bubble ${isMe ? "outgoing" : "incoming"}`}
+            >
+              <div>{message}</div>
+              <div className="timestamp">{formatTime(timestamp)}</div>
+            </div>
+          </div>
+        )
       })) : (<div>Loading...</div>)}
       <div ref={bottomRef}></div>
     </div>
