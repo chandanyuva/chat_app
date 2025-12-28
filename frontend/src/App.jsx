@@ -19,6 +19,7 @@ function App() {
   const [socket, setSocket] = useState(null);
   const [user, setUser] = useState(null);
   const [token, setToken] = useState(localStorage.getItem("token") || "");
+  const [authMode, setAuthMode] = useState("login");
 
   // Effects
 
@@ -220,9 +221,28 @@ function App() {
   // console.log(user);
   if (!user) {
     return (
-      <div>
-        <AuthForm mode="login" onSubmit={handleLogin} />
-        <AuthForm mode="signup" onSubmit={handleSignup} />
+      <div className="auth-page">
+        <div className="auth-card">
+          <div className="auth-tabs">
+            <button
+              className={`auth-tab ${authMode === "login" ? "active" : ""}`}
+              onClick={() => setAuthMode("login")}
+            >
+              Login
+            </button>
+            <button
+              className={`auth-tab ${authMode === "signup" ? "active" : ""}`}
+              onClick={() => setAuthMode("signup")}
+            >
+              Sign Up
+            </button>
+          </div>
+          {authMode === "login" ? (
+            <AuthForm mode="login" onSubmit={handleLogin} />
+          ) : (
+            <AuthForm mode="signup" onSubmit={handleSignup} />
+          )}
+        </div>
       </div>
     )
   } else {
