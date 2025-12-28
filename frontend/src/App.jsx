@@ -249,13 +249,18 @@ function App() {
     return (
       <div className="app-container">
         <div className="topbar">
-          {/* <span>Hello, {user.username}</span> */}
-          <button onClick={handleLogout}>Logout</button>
+          <div className="app-logo">Chat App</div>
+          <div className="user-controls">
+            <span>Hello, {user.username}</span>
+            <button onClick={handleLogout}>Logout</button>
+          </div>
         </div>
-        {loadingRooms ? <div>Loading...</div> : <SideBar chatList={chatList} selectedChatId={selectedChatId} onSelectChat={onSelectChatHandler} />}
-        {setSelectedChatId && messages[setSelectedChatId] ? (<div>Loading...</div>) : (
-          <ChatWindow socket={socket} chatId={selectedChatId} messages={messages} setmessages={setMessages} userId={user.userid} />
-        )}
+        <div className="main-content">
+          {loadingRooms ? <div>Loading...</div> : <SideBar chatList={chatList} selectedChatId={selectedChatId} onSelectChat={onSelectChatHandler} />}
+          {setSelectedChatId && messages[setSelectedChatId] ? (<div>Loading...</div>) : (
+            <ChatWindow socket={socket} chatId={selectedChatId} messages={messages} setmessages={setMessages} userId={user.userid} />
+          )}
+        </div>
       </div>
     )
 
