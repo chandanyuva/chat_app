@@ -1,139 +1,89 @@
-# approach for backend
+# App Overview
 
+## Frontend Component Tree
 
-1. Import Express
-2. Import HTTP
-3. Create Express app
-4. Wrap it inside an HTTP server
-5.  Import Socket.io
-6. Attach Socket.io to the HTTP server
-7. Listen for "connection" events
-8. Inside the connection:
-    1. Listen for your custom "chat_message" event
-    2. Broadcast that message using io.emit(...)
-9. Start listening on the port
+This diagram visualizes the component hierarchy, highlighting key state management (in `App`) and the props passed down to child components.
 
-## Expresss
-```
-Create an Express app
-        ↓
-Create a custom HTTP server using Node.js
-        ↓
-Tell that HTTP server to "use" the Express app
-        ↓
-Then attach Socket.io to that HTTP server
-```
+```mermaid
+graph TD
+    subgraph "App.jsx (Root Controller)"
+        App[App]
+        AppState[State: user, token, socket, messages, chatList, selectedChatId, authMode]
+    end
 
+    App -->|authMode='login'/'signup'| AuthCard[Auth Card Container]
+    AuthCard -->|mode, onSubmit| AuthForm[AuthForm.jsx]
 
->Express is just a function
->A function that knows how to respond to HTTP requests.
->The Node.js HTTP server is the machine
->A machine that receives raw network requests and passes them to a handler function.
->So the HTTP server expects something like:
->```
->httpServer = createServer(handlerFunction)
->```
->And Express itself is that handler function.
->```
->createServer(expressApp)
->```
->The Express app is like the “brain” that the HTTP server uses to decide how to respond.
+    App -->|user is authenticated| Layout[Main Layout]
+    Layout --> TopBar[Top Bar]
+    Layout --> Content[Main Content Container]
 
-## socket.io
+    Content -->|chatList, selectedChatId, onSelectChat| Sidebar[Sidebar.jsx]
+    Sidebar -->|id, name, isSelected, onSelectChat| SidebarItem[SidebarItem.jsx]
 
-**Socket.io is event-based, not request-based.**
-
-1. A client connects → server logs the connection
-2. Client emits "chat message" → server receives it
-3. Server broadcasts the message → all clients get it
-
-```
-Client → [emit "message"] → Server → [broadcast] → All Clients
+    Content -->|socket, chatId, messages, userId| Chat[ChatWindow.jsx]
+    Chat -->|messages[chatId]| MessageList[Messages Area]
+    Chat -->|socket.emit('chat_message')| Input[Input Area]
 ```
 
-## Understand Socket.io Rooms (concept)
+## Component Details
 
-Rooms in Socket.io let you:
-* Group users
-* Broadcast inside a room only
-* Keep message streams separate
+### **App.jsx**
+The central controller of the frontend application.
+*   **Responsibilities**:
+    *   **State Management**: Holds the global state for the authenticated `user`, the active `socket` connection, the list of rooms (`chatList`), and the live `messages` object.
+    *   **Authentication Flow**: conditionally renders the `AuthForm` or the main chat interface based on the `user` state.
+    *   **Socket.io Connection**: Establishes and manages the websocket connection, listening for `chat_message` and `room_history` events.
 
-Each chat item in the Sidebar will have:
-* id → this becomes the room name
-* name → display only
+### **AuthForm.jsx**
+A reusable form component for handling both Login and Signup actions.
+*   **Props**:
+    *   `mode`: Determines if the form is for "login" or "signup".
+    *   `onSubmit`: Function to handle the form submission (calls the backend API).
 
-Thus:
+### **Sidebar.jsx**
+Renders the navigation list of available chat rooms.
+*   **Props**:
+    *   `chatList`: Array of room objects fetched from the backend.
+    *   `selectedChatId`: ID of the currently active room to highlight it.
+    *   `onSelectChat`: Handler to update the `selectedChatId` in the parent state.
 
-* When a user clicks Alice:
-    * → the frontend tells the server to join room: "chat1"
+### **ChatWindow.jsx**
+The main interface for viewing and sending messages.
+*   **Props**:
+    *   `socket`: The active socket connection used to emit new messages.
+    *   `chatId`: The ID of the current room (used to filter messages).
+    *   `messages`: The global messages object (mapped by room ID).
+    *   `userId`: Used to distinguish between "incoming" (gray) and "outgoing" (blue) messages.
+*   **Key Features**:
+    *   **Auto-scroll**: Uses a `useRef` to automatically scroll to the bottom when new messages arrive.
+    *   **Real-time**: Listens for updates via the passed `socket` prop (managed in `App`).
 
-* When user clicks Bob:
-    * → join room: "chat2"
-    * → messages now flow into that room only
+## Backend Data Flow
 
-* Sending a message:
-    * → server receives "chat_message" with { roomId, message }
-    * → server broadcasts to that room only
+This diagram illustrates how data flows from the client to the server and database.
 
-# approach for frontend
+```mermaid
+graph LR
+    Client[Client Frontend]
+    
+    subgraph "Server (Express + Socket.io)"
+        Server[server.js]
+        Auth[routes/auth.js]
+        Socket[Socket Event Handlers]
+    end
+    
+    subgraph "Database (MongoDB)"
+        DB[(MongoDB)]
+        Models[Models: User, Room, Message]
+    end
 
-main components
-```jsx
-<App>
-   <Sidebar />
-   <ChatWindow>
-       <MessageList />
-       <MessageInput />
-   </ChatWindow>
-</App>
+    Client -->|HTTP POST /login| Auth
+    Auth -->|Find/Verify| Models
+    Models --> DB
+
+    Client -->|WS Connect| Server
+    Client -->|WS Emit: chat_message| Socket
+    Socket -->|Save Message| Models
+    Socket -->|WS Broadcast| Client
 ```
-
-* using socket.io-client
-
-
-# Basic architecture
-
-## MongoDB running in Docker
-* Persistent volume
-* Accessible to backend via hostname mongo
-
-## Backend running in Docker
-* Connected to MongoDB through internal DNS
-* Exposes port 3000
-* Works with socket.io
-* Saves messages
-* Loads history
-* Uses correct CORS rules
-
-## Frontend running in Docker
-* Built with Vite
-* Served via nginx
-* Talks to backend using hostname backend
-* Uses proper CORS origin (frontend:5173)
-* Works in real time
-* Auto-scrolls
-* Loads history on room join
-
-## Docker Compose orchestration
-* All 3 containers run together automatically:
-
-```
-docker compose up -d --build
-```
-
-## System's Internal Network Diagram
-
-### Inside Docker:
-
-frontend (nginx)
-   ↓       hostname: frontend
-backend (node + socket.io)
-   ↓       hostname: backend
-mongo (mongodb)
-
-
-### External access (browser):
-
-localhost:5173 → frontend
-localhost:3000 → backend (if you open manually)
-localhost:27017 → mongo (if using compass, etc)
