@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import SideBar from "./components/Sidebar.jsx"
 import ChatWindow from './components/ChatWindow.jsx';
 import AuthForm from './components/AuthForm.jsx';
@@ -25,8 +25,23 @@ function App() {
   const [user, setUser] = useState(null);
   const [token, setToken] = useState(localStorage.getItem("token") || "");
   const [authMode, setAuthMode] = useState("login");
+  const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
+  const profileMenuRef = useRef(null);
 
   // Effects
+
+  // Close profile menu when clicking outside
+  useEffect(() => {
+    function handleClickOutside(event) {
+      if (profileMenuRef.current && !profileMenuRef.current.contains(event.target)) {
+        setIsProfileMenuOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [profileMenuRef]);
 
   // Auto login on refresh
   useEffect(() => {
@@ -378,8 +393,33 @@ function App() {
         <div className="topbar">
           <div className="app-logo">Chat App</div>
           <div className="user-controls">
-            <span>Hello, {user.username}</span>
-            <button onClick={handleLogout}>Logout</button>
+            <div className="profile-menu-container" ref={profileMenuRef}>
+              <div 
+                className="profile-trigger" 
+                onClick={() => setIsProfileMenuOpen(!isProfileMenuOpen)}
+              >
+                <span className="profile-name">{user.username}</span>
+                {invitations.length > 0 && <span className="profile-badge-dot"></span>}
+              </div>
+              
+              {isProfileMenuOpen && (
+                <div className="profile-dropdown">
+                  <div 
+                    className="menu-item" 
+                    onClick={() => {
+                      setIsInvitationModalOpen(true);
+                      setIsProfileMenuOpen(false);
+                    }}
+                  >
+                    Invitations
+                    {invitations.length > 0 && <span className="menu-badge">{invitations.length}</span>}
+                  </div>
+                  <div className="menu-item logout" onClick={handleLogout}>
+                    Logout
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
         </div>
         <div className="main-content">
@@ -389,8 +429,6 @@ function App() {
               selectedRoomId={selectedRoomId} 
               onSelectRoom={onSelectRoomHandler} 
               onCreateRoom={() => setIsCreateRoomModalOpen(true)} 
-              onOpenInvites={() => setIsInvitationModalOpen(true)}
-              invitationCount={invitations.length}
             />
           )}
           {!selectedRoomId ? (
