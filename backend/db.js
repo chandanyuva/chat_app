@@ -2,8 +2,9 @@ const mongoose = require("mongoose");
 
 async function connectDB() {
   try {
-    // await mongoose.connect("mongodb://mongo:27017/chatapp"); // only works inside docker network
-    await mongoose.connect("mongodb://localhost:27017/chatapp"); // for local (outside docker) dev
+    // Use env variable or fallback to localhost
+    const uri = process.env.MONGO_URI || "mongodb://localhost:27017/chatapp";
+    await mongoose.connect(uri);
     console.log("Connected to MongoDB");
   } catch (err) {
     console.error("MongoDB connection error:", err);

@@ -6,6 +6,10 @@ WORKDIR /app
 COPY package*.json ./
 RUN npm install
 
+# Build Arguments (passed from docker-compose or command line)
+ARG VITE_BACKEND_URL
+ENV VITE_BACKEND_URL=$VITE_BACKEND_URL
+
 COPY . .
 RUN npm run build
 

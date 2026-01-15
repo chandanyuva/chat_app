@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import InviteUserModal from "./InviteUserModal";
 
-const BACKEND_URL = "http://localhost:3000";
+const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || "http://localhost:3000";
 
 function ChatWindow({ socket, roomId, room, messages, setMessages, userId, onDelete }) {
   const [isInviteModalOpen, setIsInviteModalOpen] = useState(false);

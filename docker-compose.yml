@@ -14,11 +14,18 @@ services:
     restart: always
     ports:
       - "3000:3000"
+    environment:
+      - PORT=3000
+      - MONGO_URI=mongodb://mongo:27017/chatapp
+      - FRONTEND_URL=http://${HOST_IP}:5173
     depends_on:
       - mongo
 
   frontend:
-    build: ./frontend
+    build: 
+      context: ./frontend
+      args:
+        VITE_BACKEND_URL: http://${HOST_IP}:3000
     container_name: frontend
     restart: always
     ports:

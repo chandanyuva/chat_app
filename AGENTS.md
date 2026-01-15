@@ -4,29 +4,37 @@
 - **Frontend** (`/frontend`):
   - Lint: `npm run lint` (ESLint)
   - Build: `npm run build` (Vite)
-  - Dev: `npm run dev`
+  - Dev: `npm run dev` (Starts at `http://localhost:5173`)
 - **Backend** (`/backend`):
-  - Dev: `npm run dev` (Nodemon)
+  - Dev: `npm run dev` (Nodemon, starts at `http://localhost:3000`)
   - Start: `npm start`
-- **Tests**: No test runners configured. If adding tests, use Jest/Vitest conventions.
+- **Database (Hybrid Mode)**:
+  - Start Mongo: `docker compose -f docker-compose.dev.yml up -d`
+- **Full Stack (Docker)**:
+  - Start: `docker compose up --build`
 
 ## Code Style & Conventions
 - **Frontend (React/Vite)**:
   - **Format**: Functional components, `.jsx` extension, ESM imports.
-  - **State**: React Hooks (`useState`, `useEffect`).
-  - **Linting**: Strict `no-unused-vars` (except capitalized).
+  - **State**: React Hooks (`useState`, `useEffect`, `useRef`).
+  - **Styling**: `App.css`, component-specific CSS (e.g., `TrashBinModal.css`).
+  - **Env Vars**: Access via `import.meta.env.VITE_VAR_NAME`.
 - **Backend (Node/Express)**:
   - **Format**: CommonJS (`require`), Mongoose models, Express routes.
   - **Async**: Use `async/await` with `try/catch` blocks.
+  - **Env Vars**: Access via `process.env.VAR_NAME` (using `dotenv`).
 - **General**:
   - **Naming**: camelCase for vars/functions, PascalCase for Components/Models.
   - **Paths**: Use absolute paths or `workdir` when running commands.
 
 ## Project Architecture & Data
 - **Database**: MongoDB
-  - Connection URI: `mongodb://localhost:27017/chatapp` (for local dev)
-  - Behavior: Lazy creation (database is created on first write).
-- **Seeding**:
-  - Route: `POST /seed-rooms` (defined in `backend/server.js`)
-  - Purpose: Populates initial chat rooms.
-- **Real-time**: Socket.io used for chat functionality.
+  - **Connection**: `process.env.MONGO_URI` (defaults to localhost).
+  - **Collections**: `users`, `rooms`, `messages`.
+- **Key Features**:
+  - **Rooms**: Public (open) & Private (invite-only).
+  - **Trash Bin**: Soft-delete mechanism with `deletedAt` field and 3-day automated cleanup.
+  - **Invites**: stored in `User` model, managed via `/invitations` routes.
+- **Real-time**: Socket.io
+  - **Events**: `chat_message`, `room_created`, `room_deleted`, `invitation_received`.
+  - **Auth**: Token passed in socket handshake.

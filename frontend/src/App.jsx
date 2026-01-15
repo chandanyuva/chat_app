@@ -9,8 +9,7 @@ import "./App.css"
 
 import io from "socket.io-client";
 
-const BACKEND_URL = "http://localhost:3000"
-// const BACKEND_URL = "http://192.168.1.102:3000" // only for remote dev
+const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || "http://localhost:3000";
 
 function App() {
 

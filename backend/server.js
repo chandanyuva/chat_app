@@ -1,5 +1,6 @@
 const express = require('express');
 const http = require('http');
+require("dotenv").config(); // Load environment variables
 const { Server } = require("socket.io");
 const cors = require("cors");
 const jwt = require("jsonwebtoken");
@@ -30,12 +31,12 @@ setInterval(cleanupTrash, 60 * 60 * 1000);
 
 
 const ExpressApp = express();
-const PORT = 3000;
+const PORT = process.env.PORT || 3000;
 
 const allowedOrigins = [
   "http://localhost:5173",
   "http://frontend:5173",
-  // "http://192.168.1.102:5173" // only for remote dev
+  process.env.FRONTEND_URL || "http://localhost:5173",
 ];
 
 connectDB();
