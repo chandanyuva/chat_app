@@ -71,6 +71,33 @@ body, html {
   flex-direction: column;
 }
 
+.invitations-btn {
+  margin-bottom: 10px;
+  padding: 10px;
+  background-color: #f8f9fa;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  cursor: pointer;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-weight: 500;
+  color: #333;
+}
+
+.invitations-btn:hover {
+  background-color: #e9ecef;
+}
+
+.badge {
+  background-color: #dc3545;
+  color: white;
+  font-size: 0.75rem;
+  padding: 2px 6px;
+  border-radius: 10px;
+  font-weight: bold;
+}
+
 .sidebar-item {
   padding: 10px;
   margin-bottom: 6px;

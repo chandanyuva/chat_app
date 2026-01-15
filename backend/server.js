@@ -41,6 +41,7 @@ ExpressApp.use((req, res, next) => {
 
 ExpressApp.use("/auth", require("./routes/auth.js"));
 ExpressApp.use("/rooms", require("./routes/rooms.js"));
+ExpressApp.use("/invitations", require("./routes/invitations.js"));
 
 // Routes removed
 
@@ -60,6 +61,12 @@ io.use((socket, next) => {
 
 io.on("connection", (socket) => {
   console.log('a user connected');
+  
+  // Join a personal room for direct notifications
+  if (socket.user && socket.user.userid) {
+    socket.join(socket.user.userid);
+  }
+
   socket.on("join_room", async (roomId) => {
     try {
       const room = await Room.findById(roomId);

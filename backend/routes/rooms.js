@@ -84,10 +84,32 @@ router.post("/:roomId/invite", verifyToken, async (req, res) => {
       return res.status(400).json({ error: "User is already a member" });
     }
 
-    room.members.push(userToInvite._id);
-    await room.save();
+    // Check if already invited
+    const alreadyInvited = userToInvite.invitations.some(
+      inv => inv.roomId.toString() === roomId
+    );
 
-    res.json({ message: "User invited successfully", room });
+    if (alreadyInvited) {
+       return res.status(400).json({ error: "User has already been invited" });
+    }
+
+    // Add invitation
+    userToInvite.invitations.push({
+      roomId: room._id,
+      inviterId: req.user.userid
+    });
+    await userToInvite.save();
+
+    // Notify the user via socket
+    req.io.to(userToInvite._id.toString()).emit("invitation_received", {
+      roomId: room._id,
+      roomName: room.name,
+      inviterId: req.user.userid,
+      inviterName: req.user.username // Assuming username is available in token or we fetch it. 
+      // req.user usually comes from token which has username. Let's verify middleware.
+    });
+
+    res.json({ message: "Invitation sent successfully" });
 
   } catch (err) {
     console.error(err);

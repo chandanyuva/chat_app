@@ -2,9 +2,18 @@
 import SidebarItem from "./SidebarItem";
 
 
-function Sidebar({ roomList, selectedRoomId, onSelectRoom, onCreateRoom }) {
+function Sidebar({ roomList, selectedRoomId, onSelectRoom, onCreateRoom, onOpenInvites, invitationCount }) {
   // console.log("roomList in Sidebar:", roomList);
   return <div className="sidebar">
+    <div className="sidebar-header">
+       {/* Could add a header here if needed */}
+    </div>
+    
+    <button className="invitations-btn" onClick={onOpenInvites}>
+      Invitations
+      {invitationCount > 0 && <span className="badge">{invitationCount}</span>}
+    </button>
+
     <div style={{ flex: 1, overflowY: "auto" }}>
       {(!roomList || roomList.length === 0) ? <div>No Rooms Found.</div> : (
         roomList.map((room) => {

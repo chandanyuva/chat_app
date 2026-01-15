@@ -17,6 +17,16 @@ const UserSchema = new mongoose.Schema({
     type: String,
     required: true,
   },
+  invitations: [{
+    roomId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Room"
+    },
+    inviterId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User"
+    }
+  }]
 }, { timestamps: true });
 
 module.exports = mongoose.model("User", UserSchema);

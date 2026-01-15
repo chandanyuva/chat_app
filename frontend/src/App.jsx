@@ -3,6 +3,7 @@ import SideBar from "./components/Sidebar.jsx"
 import ChatWindow from './components/ChatWindow.jsx';
 import AuthForm from './components/AuthForm.jsx';
 import CreateRoomModal from './components/CreateRoomModal.jsx';
+import InvitationListModal from './components/InvitationListModal.jsx';
 import "./App.css"
 
 import io from "socket.io-client";
@@ -18,6 +19,8 @@ function App() {
   const [roomList, setRoomList] = useState([]);
   const [messages, setMessages] = useState({});
   const [isCreateRoomModalOpen, setIsCreateRoomModalOpen] = useState(false);
+  const [isInvitationModalOpen, setIsInvitationModalOpen] = useState(false);
+  const [invitations, setInvitations] = useState([]);
   const [socket, setSocket] = useState(null);
   const [user, setUser] = useState(null);
   const [token, setToken] = useState(localStorage.getItem("token") || "");
@@ -103,6 +106,23 @@ function App() {
       }
     }
     loadRooms();
+    
+    // Load Invitations
+    async function loadInvitations() {
+      try {
+        const res = await fetch(`${BACKEND_URL}/invitations`, {
+           headers: { "Authorization": `Bearer ${token}` }
+        });
+        if (res.ok) {
+           const data = await res.json();
+           setInvitations(data);
+        }
+      } catch(err) {
+         console.error("Failed to fetch invitations", err);
+      }
+    }
+    loadInvitations();
+
   }, [user]);
 
   // Join rooms only after roomList is ready
@@ -147,6 +167,30 @@ function App() {
         }
       })
     })
+
+    // Invitation Listeners
+    newSocket.on("invitation_received", (invite) => {
+      // console.log("Invitation Received:", invite);
+      // We need to construct an object that matches the API response structure roughly
+      // API returns populated objects. Socket sends ids/names.
+      // We can just refetch or fake it. Faking it is faster for UI.
+      
+      const newInvite = {
+        roomId: { _id: invite.roomId, name: invite.roomName },
+        inviterId: { _id: invite.inviterId, username: invite.inviterName },
+        _id: Date.now() // temp id
+      };
+      setInvitations(prev => [...prev, newInvite]);
+      alert(`New invitation to join room: ${invite.roomName}`);
+    });
+
+    newSocket.on("invitation_accepted", (data) => {
+       alert(`${data.accepterName} accepted your invitation to ${data.roomName}`);
+    });
+
+    newSocket.on("invitation_rejected", (data) => {
+       alert(`${data.rejecterName} rejected your invitation to room ${data.roomId}`);
+    });
 
     newSocket.on("room_created", (newRoom) => {
       console.log("New room created:", newRoom);
@@ -249,6 +293,47 @@ function App() {
     }
   }
 
+  // Invitation Handlers
+  async function handleAcceptInvite(roomId) {
+     if (!token) return;
+     try {
+       const res = await fetch(`${BACKEND_URL}/invitations/${roomId}/accept`, {
+         method: "POST",
+         headers: { "Authorization": `Bearer ${token}` }
+       });
+       const data = await res.json();
+       if (res.ok) {
+          // Remove from local list
+          setInvitations(prev => prev.filter(inv => inv.roomId._id !== roomId));
+          // Add room to list
+          setRoomList(prev => [...prev, data.room]);
+          alert("Joined room successfully");
+       } else {
+         alert(data.error);
+       }
+     } catch(err) {
+       console.error(err);
+       alert("Error accepting invite");
+     }
+  }
+
+  async function handleRejectInvite(roomId) {
+    if (!token) return;
+    try {
+      const res = await fetch(`${BACKEND_URL}/invitations/${roomId}/reject`, {
+        method: "POST",
+        headers: { "Authorization": `Bearer ${token}` }
+      });
+      if (res.ok) {
+         setInvitations(prev => prev.filter(inv => inv.roomId._id !== roomId));
+      }
+    } catch(err) {
+      console.error(err);
+      alert("Error rejecting invite");
+    }
+  }
+
+
   // LogOut Handler
   function handleLogout() {
     localStorage.removeItem("token");
@@ -304,6 +389,8 @@ function App() {
               selectedRoomId={selectedRoomId} 
               onSelectRoom={onSelectRoomHandler} 
               onCreateRoom={() => setIsCreateRoomModalOpen(true)} 
+              onOpenInvites={() => setIsInvitationModalOpen(true)}
+              invitationCount={invitations.length}
             />
           )}
           {!selectedRoomId ? (
@@ -327,6 +414,13 @@ function App() {
             isOpen={isCreateRoomModalOpen} 
             onClose={() => setIsCreateRoomModalOpen(false)} 
             onCreate={handleCreateRoom} 
+          />
+          <InvitationListModal 
+             isOpen={isInvitationModalOpen}
+             onClose={() => setIsInvitationModalOpen(false)}
+             invitations={invitations}
+             onAccept={handleAcceptInvite}
+             onReject={handleRejectInvite}
           />
         </div>
       </div>
