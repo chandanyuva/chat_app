@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import SideBar from "./components/Sidebar.jsx"
 import ChatWindow from './components/ChatWindow.jsx';
 import AuthForm from './components/AuthForm.jsx';
+import CreateRoomModal from './components/CreateRoomModal.jsx';
 import "./App.css"
 
 import io from "socket.io-client";
@@ -12,10 +13,11 @@ const BACKEND_URL = "http://localhost:3000"
 function App() {
 
   // States
-  const [selectedChatId, setSelectedChatId] = useState("");
+  const [selectedRoomId, setSelectedRoomId] = useState("");
   const [loadingRooms, setLoadingRooms] = useState(true);
-  const [chatList, setChatList] = useState([]);
+  const [roomList, setRoomList] = useState([]);
   const [messages, setMessages] = useState({});
+  const [isCreateRoomModalOpen, setIsCreateRoomModalOpen] = useState(false);
   const [socket, setSocket] = useState(null);
   const [user, setUser] = useState(null);
   const [token, setToken] = useState(localStorage.getItem("token") || "");
@@ -66,9 +68,9 @@ function App() {
   // Rooms from db
   // useEffect(() => {
   //   fetch(`${BACKEND_URL}/rooms`).then(res => res.json()).then(data => {
-  //     setChatList(data);
+  //     setRoomList(data);
   //     setLoadingRooms(false);
-  //     if (data.length > 0) setSelectedChatId(data[0]._id);
+  //     if (data.length > 0) setSelectedRoomId(data[0]._id);
   //   })
   // }, [])
 
@@ -86,12 +88,12 @@ function App() {
         const data = await res.json();
         // console.log(data);
         if (res.ok) {
-          setChatList(data);
+          setRoomList(data);
           setLoadingRooms(false);
           if (data.length > 0) {
-            setSelectedChatId(data[0]._id);
+            setSelectedRoomId(data[0]._id);
           } else {
-            setSelectedChatId("");
+            setSelectedRoomId("");
           }
         } else {
           console.error("Room Load Error:", data.error);
@@ -103,26 +105,26 @@ function App() {
     loadRooms();
   }, [user]);
 
-  // Join rooms only after chatList is ready
+  // Join rooms only after roomList is ready
   useEffect(() => {
-    if (!socket || chatList.length === 0) return;
+    if (!socket || roomList.length === 0) return;
 
-    chatList.forEach(room => {
+    roomList.forEach(room => {
       socket.emit("join_room", room._id);
     })
-  }, [socket, chatList])
+  }, [socket, roomList])
 
   // Messages
   useEffect(() => {
-    // console.log(chatList);
-    if (chatList.length > 0) {
+    // console.log(roomList);
+    if (roomList.length > 0) {
       const initial_messages = {};
-      chatList.forEach((room) => {
+      roomList.forEach((room) => {
         initial_messages[room._id] = [];
       });
       setMessages(initial_messages);
     }
-  }, [chatList])
+  }, [roomList])
 
   // Socket
   useEffect(() => {
@@ -132,7 +134,7 @@ function App() {
     // console.log(newSocket);
     setSocket(newSocket);
     // console.log("connected to socket");
-    chatList.forEach((room) => {
+    roomList.forEach((room) => {
       newSocket.emit("join_room", room._id);
       // console.log("joining room;", room._id);
     })
@@ -148,7 +150,7 @@ function App() {
 
     newSocket.on("room_created", (newRoom) => {
       console.log("New room created:", newRoom);
-      setChatList((prev) => [...prev, newRoom]);
+      setRoomList((prev) => [...prev, newRoom]);
     });
 
     newSocket.on("room_history", (history) => {
@@ -167,13 +169,13 @@ function App() {
     return () => {
       newSocket.disconnect();
     }
-  }, [chatList]);
+  }, [roomList]);
 
   // Helper Functions
-  // selected Chat Handler
-  function onSelectChatHandler(id) {
+  // selected Room Handler
+  function onSelectRoomHandler(id) {
     // console.log(`clicked on ${id}`);
-    setSelectedChatId(id);
+    setSelectedRoomId(id);
   };
 
   // SignUp Handler
@@ -214,7 +216,7 @@ function App() {
   }
 
   // Create Room Handler
-  async function handleCreateRoom(roomName) {
+  async function handleCreateRoom(roomName, isPrivate) {
     if (!token) return;
     try {
       const res = await fetch(`${BACKEND_URL}/rooms`, {
@@ -223,17 +225,24 @@ function App() {
           "Content-Type": "application/json",
           "Authorization": `Bearer ${token}`
         },
-        body: JSON.stringify({ name: roomName })
+        body: JSON.stringify({ name: roomName, isPrivate })
       });
       const data = await res.json();
       if (!res.ok) {
         alert(data.error || "Failed to create room");
       } else {
         // Automatically select the new room
-        setSelectedChatId(data._id);
+        setSelectedRoomId(data._id);
+        
+        // If it's private, the socket won't broadcast it, so we must add it manually.
+        // If it's public, the socket WILL broadcast it. 
+        // To avoid duplicates for public rooms, we rely on the socket event for them, 
+        // OR we add logic in the socket listener to prevent duplicates.
+        // For now, let's only manually add if private.
+        if (data.isPrivate) {
+           setRoomList(prev => [...prev, data]);
+        }
       }
-      // Note: We don't need to manually update chatList here because 
-      // the socket "room_created" event will handle it for everyone.
     } catch (err) {
       console.error("Create Room Error:", err);
       alert("Error creating room");
@@ -289,17 +298,36 @@ function App() {
           </div>
         </div>
         <div className="main-content">
-          {loadingRooms ? <div>Loading...</div> : <SideBar chatList={chatList} selectedChatId={selectedChatId} onSelectChat={onSelectChatHandler} onCreateRoom={handleCreateRoom} />}
-          {!selectedChatId ? (
+          {loadingRooms ? <div>Loading...</div> : (
+            <SideBar 
+              roomList={roomList} 
+              selectedRoomId={selectedRoomId} 
+              onSelectRoom={onSelectRoomHandler} 
+              onCreateRoom={() => setIsCreateRoomModalOpen(true)} 
+            />
+          )}
+          {!selectedRoomId ? (
             <div className="welcome-screen">
               <h2>Welcome, {user.username}!</h2>
               <p>Create a new room to start chatting.</p>
             </div>
           ) : (
-            !messages[selectedChatId] ? (<div>Loading...</div>) : (
-              <ChatWindow socket={socket} chatId={selectedChatId} messages={messages} setmessages={setMessages} userId={user.userid} />
+            !messages[selectedRoomId] ? (<div>Loading...</div>) : (
+              <ChatWindow 
+                socket={socket} 
+                roomId={selectedRoomId} 
+                room={roomList.find(r => r._id === selectedRoomId)}
+                messages={messages} 
+                setmessages={setMessages} 
+                userId={user.userid} 
+              />
             )
           )}
+          <CreateRoomModal 
+            isOpen={isCreateRoomModalOpen} 
+            onClose={() => setIsCreateRoomModalOpen(false)} 
+            onCreate={handleCreateRoom} 
+          />
         </div>
       </div>
     )

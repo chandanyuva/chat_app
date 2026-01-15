@@ -1,13 +1,18 @@
 import { useState, useEffect, useRef } from "react";
+import InviteUserModal from "./InviteUserModal";
 
-function ChatWindow({ socket, chatId, messages, setMessages, userId }) {
+const BACKEND_URL = "http://localhost:3000";
+
+function ChatWindow({ socket, roomId, room, messages, setMessages, userId }) {
+  const [isInviteModalOpen, setIsInviteModalOpen] = useState(false);
+
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages[chatId]]);
+  }, [messages[roomId]]);
   function handleSend() {
     if (!text.trim()) return; // prevent empty or whitespace-only messages
     socket.emit("chat_message", {
-      roomId: chatId,
+      roomId: roomId,
       message: text,
       senderId: userId,
     })
@@ -19,12 +24,48 @@ function ChatWindow({ socket, chatId, messages, setMessages, userId }) {
     return date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
   }
 
+  async function handleInvite(username) {
+    const token = localStorage.getItem("token");
+    try {
+      const res = await fetch(`${BACKEND_URL}/rooms/${roomId}/invite`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`
+        },
+        body: JSON.stringify({ username })
+      });
+      const data = await res.json();
+      if (res.ok) {
+        alert("User invited successfully!");
+      } else {
+        alert(data.error || "Failed to invite");
+      }
+    } catch (err) {
+      console.error(err);
+      alert("Error inviting user");
+    }
+  }
+
 
   const bottomRef = useRef(null);
   const [text, setText] = useState("")
+  const isOwner = room?.owner === userId;
+
   return <div className="chatwindow">
+    <div className="chat-header">
+      <div className="chat-title">
+        {room?.name}
+        {room?.isPrivate && <span className="badge-private">Private</span>}
+      </div>
+      {isOwner && room?.isPrivate && (
+        <button className="invite-btn" onClick={() => setIsInviteModalOpen(true)}>
+          + Invite
+        </button>
+      )}
+    </div>
     <div className="messages-area">
-      {messages[chatId] ? (messages[chatId].map(({ message, senderId, timestamp }, index) => {
+      {messages[roomId] ? (messages[roomId].map(({ message, senderId, timestamp }, index) => {
         {/* console.log(message, senderId, timestamp); */ }
         const senderIdStr = typeof senderId === 'object' ? senderId?._id : senderId;
         const isMe = senderIdStr === userId;
@@ -57,6 +98,11 @@ function ChatWindow({ socket, chatId, messages, setMessages, userId }) {
       />
       < button onClick={handleSend} > Send</button>
     </div>
+    <InviteUserModal
+      isOpen={isInviteModalOpen}
+      onClose={() => setIsInviteModalOpen(false)}
+      onInvite={handleInvite}
+    />
   </div >
 }
 export default ChatWindow;

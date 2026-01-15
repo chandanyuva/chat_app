@@ -61,17 +61,40 @@ io.use((socket, next) => {
 io.on("connection", (socket) => {
   console.log('a user connected');
   socket.on("join_room", async (roomId) => {
-    socket.join(roomId);
-    console.log("joined: ", roomId);
+    try {
+      const room = await Room.findById(roomId);
+      if (!room) {
+        return socket.emit("error", "Room not found");
+      }
 
-    const history = await Message.find({ roomId })
-      .sort({ timestamp: -1 })
-      .limit(50)
-      .populate("senderId", "username"); // Populate username from User model
-    history.reverse();
-    // console.log(history);
-    socket.emit("room_history", history);
-    // console.log(roomId, ": RoomHistroy fetched")
+      if (room.isPrivate) {
+        const isMember = room.members.some(id => id.toString() === socket.user.userid);
+        if (!isMember) {
+          return socket.emit("error", "Access denied");
+        }
+      } else {
+        // Public room: Auto-join (add to members)
+        const isMember = room.members.some(id => id.toString() === socket.user.userid);
+        if (!isMember) {
+           room.members.push(socket.user.userid);
+           await room.save();
+        }
+      }
+
+      socket.join(roomId);
+      console.log("joined: ", roomId);
+
+      const history = await Message.find({ roomId })
+        .sort({ timestamp: -1 })
+        .limit(50)
+        .populate("senderId", "username"); // Populate username from User model
+      history.reverse();
+      // console.log(history);
+      socket.emit("room_history", history);
+      // console.log(roomId, ": RoomHistroy fetched")
+    } catch (err) {
+      console.error("Join Room Error:", err);
+    }
   })
   socket.on('chat_message', async ({ roomId, message, senderId }) => {
     const serverTime = Date.now();
