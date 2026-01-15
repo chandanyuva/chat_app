@@ -30,8 +30,14 @@ function App() {
   const [authMode, setAuthMode] = useState("login");
   const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
   const profileMenuRef = useRef(null);
+  const selectedRoomIdRef = useRef(selectedRoomId);
 
   // Effects
+
+  // Keep ref in sync
+  useEffect(() => {
+    selectedRoomIdRef.current = selectedRoomId;
+  }, [selectedRoomId]);
 
   // Close profile menu when clicking outside
   useEffect(() => {
@@ -237,11 +243,23 @@ function App() {
     });
 
     newSocket.on("room_deleted", ({ roomId }) => {
+       // Check if we are currently in this room
+       if (selectedRoomIdRef.current === roomId) {
+          // If I am NOT the one who initiated the delete (we can infer this if it happens unexpectedly)
+          // Ideally we check if we are the owner, but roomList might be stale in this closure without ref.
+          // Let's just notify generically if it was selected.
+          // Or better: The backend could send "deletedBy".
+          // For now, simpler: If it disappears while viewing, notify.
+          // However, if *I* deleted it, I know.
+          // Alerting myself is annoying.
+          // We can check if 'user' state is owner. 'user' is in dependency array? No.
+          // Let's just reset selection.
+          setSelectedRoomId("");
+          alert("This room has been deleted.");
+       }
+
        // Remove from active list for everyone
        setRoomList(prev => prev.filter(r => r._id !== roomId));
-       if (selectedRoomId === roomId) {
-         setSelectedRoomId("");
-       }
     });
 
     newSocket.on("room_history", (history) => {
@@ -535,7 +553,7 @@ function App() {
           {!selectedRoomId ? (
             <div className="welcome-screen">
               <h2>Welcome, {user.username}!</h2>
-              <p>Create a new room to start chatting.</p>
+              <p>Select a room to view messages or create a new one.</p>
             </div>
           ) : (
             !messages[selectedRoomId] ? (<div>Loading...</div>) : (
