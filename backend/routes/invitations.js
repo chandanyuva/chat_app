@@ -3,6 +3,7 @@ const router = express.Router();
 const User = require("../models/User");
 const Room = require("../models/Room");
 const verifyToken = require("../middleware/authMiddleware");
+const logger = require("../utils/logger");
 
 // GET /invitations - List my pending invitations
 router.get("/", verifyToken, async (req, res) => {
@@ -18,7 +19,7 @@ router.get("/", verifyToken, async (req, res) => {
     
     res.json(validInvitations);
   } catch (err) {
-    console.error(err);
+    logger.error("Fetch Invitations Error:", err);
     res.status(500).json({ error: "Failed to fetch invitations" });
   }
 });
@@ -43,35 +44,22 @@ router.post("/:roomId/accept", verifyToken, async (req, res) => {
       room.members.push(userId);
       await room.save();
     }
+    
+    logger.info(`User ${user.username} accepted invitation to room ${room.name}`);
 
-    // Determine inviter ID (find from the invite object before we deleted it? 
-    // Or simpler: just let the client tell us? No, security. 
-    // Actually we just deleted it. Let's assume we don't need to persist the notification indefinitely.)
-    
-    // Notify Inviter (We need to know WHO invited them. 
-    // Since we just deleted the invite, we lost that info unless we retrieved it first.)
-    // Let's refine the logic to find the invite first.
-    
-    // (Optimization: We could have fetched the invite first)
+    // Notify Inviter
     // For simplicity in this iteration, we will broadcast to the ROOM owner, 
     // OR we just emit to the room that a user joined.
-    // BUT the requirement was "Notify the inviter".
-    // Let's assume the owner is the inviter for now, or emit to room owner.
-    
     req.io.to(room.owner.toString()).emit("invitation_accepted", {
       roomId,
       roomName: room.name,
       accepterName: req.user.username
     });
     
-    // Also emit to the user so their room list updates immediately
-    // Or frontend can handle it.
-    // Sending the room object back helps frontend add it to list.
-    
     res.json({ message: "Invitation accepted", room });
 
   } catch (err) {
-    console.error(err);
+    logger.error("Accept Invite Error:", err);
     res.status(500).json({ error: "Failed to accept invitation" });
   }
 });
@@ -91,6 +79,8 @@ router.post("/:roomId/reject", verifyToken, async (req, res) => {
     // Remove invitation
     user.invitations = user.invitations.filter(inv => inv.roomId.toString() !== roomId);
     await user.save();
+    
+    logger.info(`User ${user.username} rejected invitation to room ${roomId}`);
 
     // Notify Inviter
     if (inviterId) {
@@ -103,7 +93,7 @@ router.post("/:roomId/reject", verifyToken, async (req, res) => {
     res.json({ message: "Invitation rejected" });
 
   } catch (err) {
-    console.error(err);
+    logger.error("Reject Invite Error:", err);
     res.status(500).json({ error: "Failed to reject invitation" });
   }
 });

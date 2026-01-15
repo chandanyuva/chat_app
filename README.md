@@ -70,6 +70,8 @@ The app is designed to be environment-agnostic. Configuration is handled via `.e
     MONGO_URI=mongodb://localhost:27017/chatapp
     FRONTEND_URL=http://localhost:5173
     JWT_SECRET=devsecret
+    LOGGING_ENABLED=true
+    LOG_LEVEL=info
     ```
 *   **Frontend `.env`:**
     ```env

@@ -3,6 +3,7 @@ const router = express.Router();
 const Room = require("../models/Room");
 const User = require("../models/User");
 const verifyToken = require("../middleware/authMiddleware");
+const logger = require("../utils/logger");
 
 // GET /rooms - Fetch all rooms (Protected)
 // Return all Public rooms OR Private rooms where the user is a member
@@ -22,7 +23,7 @@ router.get("/", verifyToken, async (req, res) => {
     });
     res.json(rooms);
   } catch (err) {
-    console.error(err);
+    logger.error("Fetch Rooms Error:", err);
     res.status(500).json({ error: "Failed to fetch rooms" });
   }
 });
@@ -45,6 +46,8 @@ router.post("/", verifyToken, async (req, res) => {
       members: [ownerId] // Add creator as the first member
     });
 
+    logger.info(`Room created: ${name} (Private: ${isPrivate}) by ${req.user.username}`);
+
     // Broadcast the new room to all connected clients ONLY if it is Public
     if (!newRoom.isPrivate) {
       req.io.emit("room_created", newRoom);
@@ -52,7 +55,7 @@ router.post("/", verifyToken, async (req, res) => {
 
     res.status(201).json(newRoom);
   } catch (err) {
-    console.error(err);
+    logger.error("Create Room Error:", err);
     res.status(500).json({ error: "Failed to create room" });
   }
 });
@@ -105,19 +108,20 @@ router.post("/:roomId/invite", verifyToken, async (req, res) => {
     });
     await userToInvite.save();
 
+    logger.info(`User ${req.user.username} invited ${username} to room ${room.name}`);
+
     // Notify the user via socket
     req.io.to(userToInvite._id.toString()).emit("invitation_received", {
       roomId: room._id,
       roomName: room.name,
       inviterId: req.user.userid,
-      inviterName: req.user.username // Assuming username is available in token or we fetch it. 
-      // req.user usually comes from token which has username. Let's verify middleware.
+      inviterName: req.user.username 
     });
 
     res.json({ message: "Invitation sent successfully" });
 
   } catch (err) {
-    console.error(err);
+    logger.error("Invite User Error:", err);
     res.status(500).json({ error: "Failed to invite user" });
   }
 });
@@ -134,7 +138,7 @@ router.get("/trash", verifyToken, async (req, res) => {
     });
     res.json(rooms);
   } catch (err) {
-    console.error(err);
+    logger.error("Fetch Trash Error:", err);
     res.status(500).json({ error: "Failed to fetch trash" });
   }
 });
@@ -153,12 +157,14 @@ router.delete("/:roomId", verifyToken, async (req, res) => {
 
     room.deletedAt = new Date();
     await room.save();
+    
+    logger.info(`Room soft-deleted: ${room.name} by ${req.user.username}`);
 
     req.io.emit("room_deleted", { roomId }); // Notify everyone to remove from list
 
     res.json({ message: "Room moved to trash" });
   } catch (err) {
-    console.error(err);
+    logger.error("Delete Room Error:", err);
     res.status(500).json({ error: "Failed to delete room" });
   }
 });
@@ -178,13 +184,15 @@ router.post("/:roomId/restore", verifyToken, async (req, res) => {
     room.deletedAt = null;
     await room.save();
 
+    logger.info(`Room restored: ${room.name} by ${req.user.username}`);
+
     // Notify relevant users (Public or Members) that room is back
     // Simplest approach: Just emit 'room_created' effectively re-adding it
     req.io.emit("room_created", room);
 
     res.json({ message: "Room restored" });
   } catch (err) {
-    console.error(err);
+    logger.error("Restore Room Error:", err);
     res.status(500).json({ error: "Failed to restore room" });
   }
 });
@@ -202,10 +210,12 @@ router.delete("/:roomId/permanent", verifyToken, async (req, res) => {
     }
 
     await Room.deleteOne({ _id: roomId });
+    
+    logger.info(`Room permanently deleted: ${room.name} by ${req.user.username}`);
 
     res.json({ message: "Room deleted permanently" });
   } catch (err) {
-    console.error(err);
+    logger.error("Permanent Delete Error:", err);
     res.status(500).json({ error: "Failed to delete room permanently" });
   }
 });

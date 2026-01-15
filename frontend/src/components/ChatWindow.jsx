@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import InviteUserModal from "./InviteUserModal";
+import logger from "../utils/logger";
 
 const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || "http://localhost:3000";
 
@@ -42,7 +43,7 @@ function ChatWindow({ socket, roomId, room, messages, setMessages, userId, onDel
         alert(data.error || "Failed to invite");
       }
     } catch (err) {
-      console.error(err);
+      logger.error(err);
       alert("Error inviting user");
     }
   }
@@ -77,7 +78,6 @@ function ChatWindow({ socket, roomId, room, messages, setMessages, userId, onDel
     </div>
     <div className="messages-area">
       {messages[roomId] ? (messages[roomId].map(({ message, senderId, timestamp }, index) => {
-        {/* console.log(message, senderId, timestamp); */ }
         const senderIdStr = typeof senderId === 'object' ? senderId?._id : senderId;
         const isMe = senderIdStr === userId;
         const senderName = typeof senderId === 'object' ? senderId?.username : "Unknown";

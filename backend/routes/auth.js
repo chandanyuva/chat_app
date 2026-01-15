@@ -3,19 +3,20 @@ const authRouter = express.Router();
 const User = require("../models/User.js");
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
+const logger = require("../utils/logger");
 
 const JWT_SECRET = process.env.JWT_SECRET || "devsecret";
 const JWT_EXPIRES_IN = "5h";
 
 //signup
 authRouter.post("/signup", async (req, res) => {
-  console.log("inside Auth", req.body);
+  logger.debug("Inside Auth Signup", { body: req.body });
   const { email, username, password } = req.body;
 
   if (!email || !username || !password) {
     return res.status(400).json({ error: "All fields required" });
   }
-  if (password.lenght < 6) {
+  if (password.length < 6) {
     return res.status(400).json({ error: "Password must be 6+ chars" });
   }
   try {
@@ -48,6 +49,8 @@ authRouter.post("/signup", async (req, res) => {
       { expiresIn: JWT_EXPIRES_IN }
     )
 
+    logger.info(`New user signed up: ${username}`);
+
     res.json({
       token,
       user: {
@@ -57,7 +60,7 @@ authRouter.post("/signup", async (req, res) => {
       }
     });
   } catch (err) {
-    console.error(err);
+    logger.error("Signup Error:", err);
     res.status(500).json({ error: "Server error" });
   }
 });
@@ -76,6 +79,7 @@ authRouter.post("/login", async (req, res) => {
     }
     const isPasswordMatch = await bcrypt.compare(password, user.passwordHash);
     if (!isPasswordMatch) {
+      logger.warn(`Failed login attempt for ${email}`);
       return res.status(400).json({ error: "Incorrect password" });
     }
     const token = jwt.sign(
@@ -87,6 +91,9 @@ authRouter.post("/login", async (req, res) => {
       JWT_SECRET,
       { expiresIn: JWT_EXPIRES_IN }
     );
+    
+    logger.info(`User logged in: ${user.username}`);
+    
     res.json({
       token,
       user: {
@@ -96,7 +103,7 @@ authRouter.post("/login", async (req, res) => {
       }
     });
   } catch (err) {
-    console.error(err);
+    logger.error("Login Error:", err);
     res.status(500).json({ error: "Server error" });
   }
 });

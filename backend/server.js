@@ -4,6 +4,8 @@ require("dotenv").config(); // Load environment variables
 const { Server } = require("socket.io");
 const cors = require("cors");
 const jwt = require("jsonwebtoken");
+const morgan = require('morgan');
+const logger = require('./utils/logger');
 const connectDB = require("./db");
 const Message = require("./models/Message.js");
 const Room = require("./models/Room.js");
@@ -18,10 +20,10 @@ async function cleanupTrash() {
       deletedAt: { $ne: null, $lt: thresholdDate }
     });
     if (result.deletedCount > 0) {
-      console.log(`[Auto-Cleanup] Deleted ${result.deletedCount} expired rooms.`);
+      logger.info(`[Auto-Cleanup] Deleted ${result.deletedCount} expired rooms.`);
     }
   } catch (err) {
-    console.error("[Auto-Cleanup] Error:", err);
+    logger.error("[Auto-Cleanup] Error:", err);
   }
 }
 
@@ -55,6 +57,14 @@ ExpressApp.use(cors({
 }));
 ExpressApp.use(express.json());
 
+// Morgan HTTP Request Logging
+const morganFormat = ':method :url :status :res[content-length] - :response-time ms';
+ExpressApp.use(morgan(morganFormat, {
+  stream: {
+    write: (message) => logger.info(message.trim())
+  }
+}));
+
 // Attach io to request to be used in routes
 ExpressApp.use((req, res, next) => {
   req.io = io;
@@ -64,8 +74,6 @@ ExpressApp.use((req, res, next) => {
 ExpressApp.use("/auth", require("./routes/auth.js"));
 ExpressApp.use("/rooms", require("./routes/rooms.js"));
 ExpressApp.use("/invitations", require("./routes/invitations.js"));
-
-// Routes removed
 
 
 io.use((socket, next) => {
@@ -82,7 +90,7 @@ io.use((socket, next) => {
 })
 
 io.on("connection", (socket) => {
-  console.log('a user connected');
+  logger.info(`User connected: ${socket.user.username} (${socket.user.userid})`);
   
   // Join a personal room for direct notifications
   if (socket.user && socket.user.userid) {
@@ -99,6 +107,7 @@ io.on("connection", (socket) => {
       if (room.isPrivate) {
         const isMember = room.members.some(id => id.toString() === socket.user.userid);
         if (!isMember) {
+          logger.warn(`Access denied for user ${socket.user.username} to room ${roomId}`);
           return socket.emit("error", "Access denied");
         }
       } else {
@@ -107,26 +116,31 @@ io.on("connection", (socket) => {
         if (!isMember) {
            room.members.push(socket.user.userid);
            await room.save();
+           logger.debug(`User ${socket.user.username} auto-joined public room ${roomId}`);
         }
       }
 
       socket.join(roomId);
-      console.log("joined: ", roomId);
+      logger.info(`User ${socket.user.username} joined room: ${roomId}`);
 
       const history = await Message.find({ roomId })
         .sort({ timestamp: -1 })
         .limit(50)
         .populate("senderId", "username"); // Populate username from User model
       history.reverse();
-      // console.log(history);
+      
       socket.emit("room_history", history);
-      // console.log(roomId, ": RoomHistroy fetched")
+      logger.debug(`Sent history to ${socket.user.username} for room ${roomId}`);
     } catch (err) {
-      console.error("Join Room Error:", err);
+      logger.error("Join Room Error:", err);
     }
   })
   socket.on('chat_message', async ({ roomId, message, senderId }) => {
     const serverTime = Date.now();
+    
+    // Detailed debug log (hidden unless LOG_LEVEL=debug)
+    logger.debug(`Incoming message from ${socket.user.username} in ${roomId}: ${message}`);
+
     await Message.create({
       roomId,
       message,
@@ -142,13 +156,16 @@ io.on("connection", (socket) => {
       },
       timestamp: serverTime
     });
-    console.log("incomming: ", serverTime, roomId, senderId, message);
+    
+    // Concise info log
+    logger.info(`Message sent in room ${roomId} by ${socket.user.username}`);
   });
-  socket.on("disconnect", (msg) => {
-    console.log("user disconnected", msg);
+  
+  socket.on("disconnect", (reason) => {
+    logger.info(`User disconnected: ${socket.user.username} (${reason})`);
   })
 })
 
 mainServer.listen(PORT, () => {
-  console.log(`Server listening on PORT: ${PORT}`);
+  logger.info(`Server listening on PORT: ${PORT}`);
 })

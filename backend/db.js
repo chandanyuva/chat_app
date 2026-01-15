@@ -1,13 +1,14 @@
 const mongoose = require("mongoose");
+const logger = require("./utils/logger");
 
 async function connectDB() {
   try {
     // Use env variable or fallback to localhost
     const uri = process.env.MONGO_URI || "mongodb://localhost:27017/chatapp";
     await mongoose.connect(uri);
-    console.log("Connected to MongoDB");
+    logger.info("Connected to MongoDB");
   } catch (err) {
-    console.error("MongoDB connection error:", err);
+    logger.error("MongoDB connection error:", err);
   }
 }
 

@@ -5,6 +5,7 @@ import AuthForm from './components/AuthForm.jsx';
 import CreateRoomModal from './components/CreateRoomModal.jsx';
 import InvitationListModal from './components/InvitationListModal.jsx';
 import TrashBinModal from './components/TrashBinModal.jsx';
+import logger from './utils/logger';
 import "./App.css"
 
 import io from "socket.io-client";
@@ -68,7 +69,7 @@ function App() {
           setUser(null);
         }
       } catch (err) {
-        console.error(err);
+        logger.error(err);
         setUser(null);
       }
     }
@@ -84,21 +85,17 @@ function App() {
     });
 
     setSocket(newSocket);
+    
+    // Debug listener for all events
+    newSocket.onAny((eventName, ...args) => {
+      logger.debug(`[Socket Incoming] ${eventName}`, args);
+    });
 
     return () => {
       newSocket.disconnect();
     };
 
   }, [token]);
-
-  // Rooms from db
-  // useEffect(() => {
-  //   fetch(`${BACKEND_URL}/rooms`).then(res => res.json()).then(data => {
-  //     setRoomList(data);
-  //     setLoadingRooms(false);
-  //     if (data.length > 0) setSelectedRoomId(data[0]._id);
-  //   })
-  // }, [])
 
   // Rooms from db only after user login
   useEffect(() => {
@@ -112,7 +109,7 @@ function App() {
           }
         });
         const data = await res.json();
-        // console.log(data);
+        // logger.debug("Rooms loaded:", data);
         if (res.ok) {
           setRoomList(data);
           setLoadingRooms(false);
@@ -122,10 +119,10 @@ function App() {
             setSelectedRoomId("");
           }
         } else {
-          console.error("Room Load Error:", data.error);
+          logger.error("Room Load Error:", data.error);
         }
       } catch (err) {
-        console.error("Failed to fetch Rooms: ", err);
+        logger.error("Failed to fetch Rooms: ", err);
       }
     }
     loadRooms();
@@ -141,7 +138,7 @@ function App() {
            setInvitations(data);
         }
       } catch(err) {
-         console.error("Failed to fetch invitations", err);
+         logger.error("Failed to fetch invitations", err);
       }
     }
     loadInvitations();
@@ -157,7 +154,7 @@ function App() {
            setTrashRooms(data);
         }
       } catch(err) {
-         console.error("Failed to fetch trash", err);
+         logger.error("Failed to fetch trash", err);
       }
     }
     loadTrash();
@@ -175,7 +172,7 @@ function App() {
 
   // Messages
   useEffect(() => {
-    // console.log(roomList);
+    // logger.debug(roomList);
     if (roomList.length > 0) {
       const initial_messages = {};
       roomList.forEach((room) => {
@@ -190,15 +187,21 @@ function App() {
     const newSocket = io(`${BACKEND_URL}`, {
       auth: { token }
     });
-    // console.log(newSocket);
+    // logger.debug(newSocket);
     setSocket(newSocket);
-    // console.log("connected to socket");
+    // logger.info("connected to socket");
     roomList.forEach((room) => {
       newSocket.emit("join_room", room._id);
-      // console.log("joining room;", room._id);
+      // logger.debug("joining room;", room._id);
     })
+    
+    // Debug listener for all events
+    newSocket.onAny((eventName, ...args) => {
+      logger.debug(`[Socket Incoming] ${eventName}`, args);
+    });
+    
     newSocket.on("chat_message", ({ roomId, message, senderId, timestamp }) => {
-      console.log("incomming :", timestamp, roomId, senderId, message);
+      logger.info("Incoming Message:", timestamp, roomId, senderId, message);
       setMessages((prev) => {
         return {
           ...prev,
@@ -209,7 +212,7 @@ function App() {
 
     // Invitation Listeners
     newSocket.on("invitation_received", (invite) => {
-      // console.log("Invitation Received:", invite);
+      // logger.info("Invitation Received:", invite);
       // We need to construct an object that matches the API response structure roughly
       // API returns populated objects. Socket sends ids/names.
       // We can just refetch or fake it. Faking it is faster for UI.
@@ -232,7 +235,7 @@ function App() {
     });
 
     newSocket.on("room_created", (newRoom) => {
-      console.log("New room created:", newRoom);
+      logger.info("New room created:", newRoom);
       // We might get this event even if we restored a room.
       // Ensure we don't add duplicates if it's already there (though backend usually handles this)
       setRoomList((prev) => {
@@ -265,7 +268,7 @@ function App() {
       if (history.length === 0) return;
       const roomId = history[0].roomId;
 
-      // console.log("HISTORY RECEIVED:", history);
+      // logger.debug("HISTORY RECEIVED:", history);
 
       setMessages((prev) => {
         return {
@@ -282,7 +285,7 @@ function App() {
   // Helper Functions
   // selected Room Handler
   function onSelectRoomHandler(id) {
-    // console.log(`clicked on ${id}`);
+    // logger.debug(`clicked on ${id}`);
     setSelectedRoomId(id);
   };
 
@@ -293,7 +296,7 @@ function App() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ email, username, password })
     });
-    // console.log(res);
+    // logger.debug(res);
 
     const data = await res.json();
     if (res.ok) {
@@ -352,7 +355,7 @@ function App() {
         }
       }
     } catch (err) {
-      console.error("Create Room Error:", err);
+      logger.error("Create Room Error:", err);
       alert("Error creating room");
     }
   }
@@ -376,7 +379,7 @@ function App() {
          alert(data.error);
        }
      } catch(err) {
-       console.error(err);
+       logger.error(err);
        alert("Error accepting invite");
      }
   }
@@ -392,7 +395,7 @@ function App() {
          setInvitations(prev => prev.filter(inv => inv.roomId._id !== roomId));
       }
     } catch(err) {
-      console.error(err);
+      logger.error(err);
       alert("Error rejecting invite");
     }
   }
@@ -419,7 +422,7 @@ function App() {
         alert(data.error);
       }
     } catch(err) {
-      console.error(err);
+      logger.error(err);
       alert("Error deleting room");
     }
   }
@@ -436,7 +439,7 @@ function App() {
         alert("Room restored!");
       }
     } catch(err) {
-      console.error(err);
+      logger.error(err);
       alert("Error restoring room");
     }
   }
@@ -452,7 +455,7 @@ function App() {
         setTrashRooms(prev => prev.filter(r => r._id !== roomId));
       }
     } catch(err) {
-      console.error(err);
+      logger.error(err);
       alert("Error deleting permanently");
     }
   }
@@ -469,7 +472,7 @@ function App() {
     }
   }
 
-  // console.log(user);
+  // logger.debug(user);
   if (!user) {
     return (
       <div className="auth-page">

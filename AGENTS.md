@@ -19,12 +19,20 @@
   - **State**: React Hooks (`useState`, `useEffect`, `useRef`).
   - **Styling**: `App.css`, component-specific CSS (e.g., `TrashBinModal.css`).
   - **Env Vars**: Access via `import.meta.env.VITE_VAR_NAME`.
+  - **Logging**: Use `utils/logger.js` (default export `logger`).
+    - Control via browser console: `window.logger.on()` / `window.logger.off()`.
+    - Persists in `localStorage`.
 - **Backend (Node/Express)**:
   - **Format**: CommonJS (`require`), Mongoose models, Express routes.
   - **Async**: Use `async/await` with `try/catch` blocks.
   - **Env Vars**: Access via `process.env.VAR_NAME` (using `dotenv`).
+  - **Logging**: Use `utils/logger.js`. Do not use `console.log`.
+    - `logger.info("message")` for general info.
+    - `logger.error("message", err)` for errors.
+    - `logger.debug("message", object)` for debugging (only shows if `LOG_LEVEL=debug`).
 - **General**:
   - **Naming**: camelCase for vars/functions, PascalCase for Components/Models.
+
   - **Paths**: Use absolute paths or `workdir` when running commands.
 
 ## Project Architecture & Data
