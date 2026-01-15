@@ -91,7 +91,7 @@ function App() {
           if (data.length > 0) {
             setSelectedChatId(data[0]._id);
           } else {
-            console.warn("Rooms list empty");
+            setSelectedChatId("");
           }
         } else {
           console.error("Room Load Error:", data.error);
@@ -228,6 +228,9 @@ function App() {
       const data = await res.json();
       if (!res.ok) {
         alert(data.error || "Failed to create room");
+      } else {
+        // Automatically select the new room
+        setSelectedChatId(data._id);
       }
       // Note: We don't need to manually update chatList here because 
       // the socket "room_created" event will handle it for everyone.
@@ -287,8 +290,15 @@ function App() {
         </div>
         <div className="main-content">
           {loadingRooms ? <div>Loading...</div> : <SideBar chatList={chatList} selectedChatId={selectedChatId} onSelectChat={onSelectChatHandler} onCreateRoom={handleCreateRoom} />}
-          {setSelectedChatId && messages[setSelectedChatId] ? (<div>Loading...</div>) : (
-            <ChatWindow socket={socket} chatId={selectedChatId} messages={messages} setmessages={setMessages} userId={user.userid} />
+          {!selectedChatId ? (
+            <div className="welcome-screen">
+              <h2>Welcome, {user.username}!</h2>
+              <p>Create a new room to start chatting.</p>
+            </div>
+          ) : (
+            !messages[selectedChatId] ? (<div>Loading...</div>) : (
+              <ChatWindow socket={socket} chatId={selectedChatId} messages={messages} setmessages={setMessages} userId={user.userid} />
+            )
           )}
         </div>
       </div>

@@ -42,22 +42,8 @@ ExpressApp.use((req, res, next) => {
 ExpressApp.use("/auth", require("./routes/auth.js"));
 ExpressApp.use("/rooms", require("./routes/rooms.js"));
 
-ExpressApp.get("/", (req, res) => {
-  res.send("Hello, world!")
-})
+// Routes removed
 
-// needs to be done atleast once on new mongo containers
-// use this route to seed initial rooms in the db 
-// temp remove after initial room seeding
-ExpressApp.get("/seed-rooms", async (req, res) => {
-  await Room.deleteMany({});
-  const rooms = await Room.insertMany([
-    { name: "Alice" },
-    { name: "Bob" },
-    { name: "Yuva" },
-  ]);
-  res.json(rooms);
-});
 
 io.use((socket, next) => {
   const token = socket.handshake.auth.token;

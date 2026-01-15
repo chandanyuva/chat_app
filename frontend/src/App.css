@@ -294,3 +294,22 @@ body, html {
 .auth-form button:hover {
   background: #0056b3;
 }
+
+/* Welcome Screen */
+.welcome-screen {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+  color: #666;
+  background-color: #f8f9fa;
+  border-radius: 0 4px 4px 0;
+  padding: 20px;
+}
+
+.welcome-screen h2 {
+  color: #333;
+  margin-bottom: 10px;
+}
