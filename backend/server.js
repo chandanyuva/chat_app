@@ -7,6 +7,27 @@ const connectDB = require("./db");
 const Message = require("./models/Message.js");
 const Room = require("./models/Room.js");
 
+// Scheduled Task: Cleanup Trash (Rooms deleted > 3 days ago)
+const TRASH_RETENTION_MS = 3 * 24 * 60 * 60 * 1000; // 3 days
+
+async function cleanupTrash() {
+  try {
+    const thresholdDate = new Date(Date.now() - TRASH_RETENTION_MS);
+    const result = await Room.deleteMany({
+      deletedAt: { $ne: null, $lt: thresholdDate }
+    });
+    if (result.deletedCount > 0) {
+      console.log(`[Auto-Cleanup] Deleted ${result.deletedCount} expired rooms.`);
+    }
+  } catch (err) {
+    console.error("[Auto-Cleanup] Error:", err);
+  }
+}
+
+// Run cleanup on startup and then every hour
+cleanupTrash();
+setInterval(cleanupTrash, 60 * 60 * 1000); 
+
 
 const ExpressApp = express();
 const PORT = 3000;

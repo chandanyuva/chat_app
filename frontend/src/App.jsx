@@ -4,6 +4,7 @@ import ChatWindow from './components/ChatWindow.jsx';
 import AuthForm from './components/AuthForm.jsx';
 import CreateRoomModal from './components/CreateRoomModal.jsx';
 import InvitationListModal from './components/InvitationListModal.jsx';
+import TrashBinModal from './components/TrashBinModal.jsx';
 import "./App.css"
 
 import io from "socket.io-client";
@@ -20,7 +21,9 @@ function App() {
   const [messages, setMessages] = useState({});
   const [isCreateRoomModalOpen, setIsCreateRoomModalOpen] = useState(false);
   const [isInvitationModalOpen, setIsInvitationModalOpen] = useState(false);
+  const [isTrashBinModalOpen, setIsTrashBinModalOpen] = useState(false);
   const [invitations, setInvitations] = useState([]);
+  const [trashRooms, setTrashRooms] = useState([]);
   const [socket, setSocket] = useState(null);
   const [user, setUser] = useState(null);
   const [token, setToken] = useState(localStorage.getItem("token") || "");
@@ -138,6 +141,22 @@ function App() {
     }
     loadInvitations();
 
+    // Load Trash
+    async function loadTrash() {
+      try {
+        const res = await fetch(`${BACKEND_URL}/rooms/trash`, {
+           headers: { "Authorization": `Bearer ${token}` }
+        });
+        if (res.ok) {
+           const data = await res.json();
+           setTrashRooms(data);
+        }
+      } catch(err) {
+         console.error("Failed to fetch trash", err);
+      }
+    }
+    loadTrash();
+
   }, [user]);
 
   // Join rooms only after roomList is ready
@@ -209,7 +228,20 @@ function App() {
 
     newSocket.on("room_created", (newRoom) => {
       console.log("New room created:", newRoom);
-      setRoomList((prev) => [...prev, newRoom]);
+      // We might get this event even if we restored a room.
+      // Ensure we don't add duplicates if it's already there (though backend usually handles this)
+      setRoomList((prev) => {
+        if (prev.some(r => r._id === newRoom._id)) return prev;
+        return [...prev, newRoom];
+      });
+    });
+
+    newSocket.on("room_deleted", ({ roomId }) => {
+       // Remove from active list for everyone
+       setRoomList(prev => prev.filter(r => r._id !== roomId));
+       if (selectedRoomId === roomId) {
+         setSelectedRoomId("");
+       }
     });
 
     newSocket.on("room_history", (history) => {
@@ -349,6 +381,66 @@ function App() {
   }
 
 
+  // Trash Handlers
+  async function handleDeleteRoom(roomId) {
+    if (!confirm("Are you sure you want to delete this room? It will be moved to the trash for 3 days.")) return;
+    
+    try {
+      const res = await fetch(`${BACKEND_URL}/rooms/${roomId}`, {
+        method: "DELETE",
+        headers: { "Authorization": `Bearer ${token}` }
+      });
+      if (res.ok) {
+        // Optimistic UI update
+        const room = roomList.find(r => r._id === roomId);
+        if (room) {
+           setTrashRooms(prev => [...prev, room]);
+        }
+        // Room removal from list is handled by socket "room_deleted"
+      } else {
+        const data = await res.json();
+        alert(data.error);
+      }
+    } catch(err) {
+      console.error(err);
+      alert("Error deleting room");
+    }
+  }
+
+  async function handleRestoreRoom(roomId) {
+    try {
+      const res = await fetch(`${BACKEND_URL}/rooms/${roomId}/restore`, {
+        method: "POST",
+        headers: { "Authorization": `Bearer ${token}` }
+      });
+      if (res.ok) {
+        setTrashRooms(prev => prev.filter(r => r._id !== roomId));
+        // Room addition to list is handled by socket "room_created"
+        alert("Room restored!");
+      }
+    } catch(err) {
+      console.error(err);
+      alert("Error restoring room");
+    }
+  }
+
+  async function handleDeletePermanent(roomId) {
+    if (!confirm("This action cannot be undone. Delete forever?")) return;
+    try {
+      const res = await fetch(`${BACKEND_URL}/rooms/${roomId}/permanent`, {
+        method: "DELETE",
+        headers: { "Authorization": `Bearer ${token}` }
+      });
+      if (res.ok) {
+        setTrashRooms(prev => prev.filter(r => r._id !== roomId));
+      }
+    } catch(err) {
+      console.error(err);
+      alert("Error deleting permanently");
+    }
+  }
+
+
   // LogOut Handler
   function handleLogout() {
     localStorage.removeItem("token");
@@ -414,6 +506,15 @@ function App() {
                     Invitations
                     {invitations.length > 0 && <span className="menu-badge">{invitations.length}</span>}
                   </div>
+                  <div 
+                    className="menu-item" 
+                    onClick={() => {
+                      setIsTrashBinModalOpen(true);
+                      setIsProfileMenuOpen(false);
+                    }}
+                  >
+                    Trash Bin
+                  </div>
                   <div className="menu-item logout" onClick={handleLogout}>
                     Logout
                   </div>
@@ -445,6 +546,7 @@ function App() {
                 messages={messages} 
                 setmessages={setMessages} 
                 userId={user.userid} 
+                onDelete={handleDeleteRoom}
               />
             )
           )}
@@ -459,6 +561,13 @@ function App() {
              invitations={invitations}
              onAccept={handleAcceptInvite}
              onReject={handleRejectInvite}
+          />
+          <TrashBinModal 
+             isOpen={isTrashBinModalOpen}
+             onClose={() => setIsTrashBinModalOpen(false)}
+             trashRooms={trashRooms}
+             onRestore={handleRestoreRoom}
+             onDeletePermanent={handleDeletePermanent}
           />
         </div>
       </div>

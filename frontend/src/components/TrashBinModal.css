@@ -1,0 +1,76 @@
+.trash-modal {
+  width: 450px;
+}
+
+.trash-info {
+  font-size: 0.85rem;
+  color: #666;
+  margin-bottom: 15px;
+}
+
+.no-trash {
+  color: #888;
+  font-style: italic;
+  text-align: center;
+  padding: 20px 0;
+}
+
+.trash-list {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 20px 0;
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.trash-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px;
+  border-bottom: 1px solid #eee;
+}
+
+.trash-item:last-child {
+  border-bottom: none;
+}
+
+.trash-room-name {
+  font-weight: bold;
+  color: #333;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.trash-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.trash-actions button {
+  padding: 6px 12px;
+  border-radius: 4px;
+  border: none;
+  cursor: pointer;
+  font-size: 0.8rem;
+  font-weight: bold;
+}
+
+.restore-btn {
+  background-color: #28a745;
+  color: white;
+}
+
+.restore-btn:hover {
+  background-color: #218838;
+}
+
+.delete-perm-btn {
+  background-color: #dc3545;
+  color: white;
+}
+
+.delete-perm-btn:hover {
+  background-color: #c82333;
+}

@@ -3,7 +3,7 @@ import InviteUserModal from "./InviteUserModal";
 
 const BACKEND_URL = "http://localhost:3000";
 
-function ChatWindow({ socket, roomId, room, messages, setMessages, userId }) {
+function ChatWindow({ socket, roomId, room, messages, setMessages, userId, onDelete }) {
   const [isInviteModalOpen, setIsInviteModalOpen] = useState(false);
 
   useEffect(() => {
@@ -58,11 +58,22 @@ function ChatWindow({ socket, roomId, room, messages, setMessages, userId }) {
         {room?.name}
         {room?.isPrivate && <span className="badge-private">Private</span>}
       </div>
-      {isOwner && room?.isPrivate && (
-        <button className="invite-btn" onClick={() => setIsInviteModalOpen(true)}>
-          + Invite
-        </button>
-      )}
+      <div className="chat-actions">
+        {isOwner && room?.isPrivate && (
+          <button className="invite-btn" onClick={() => setIsInviteModalOpen(true)}>
+            + Invite
+          </button>
+        )}
+        {isOwner && (
+          <button 
+            className="delete-room-btn" 
+            title="Delete Room"
+            onClick={() => onDelete(roomId)}
+          >
+            🗑️
+          </button>
+        )}
+      </div>
     </div>
     <div className="messages-area">
       {messages[roomId] ? (messages[roomId].map(({ message, senderId, timestamp }, index) => {

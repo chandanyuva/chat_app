@@ -10,9 +10,14 @@ router.get("/", verifyToken, async (req, res) => {
   try {
     const userId = req.user.userid;
     const rooms = await Room.find({
-      $or: [
-        { isPrivate: false },
-        { members: userId }
+      $and: [
+        { deletedAt: null },
+        {
+          $or: [
+            { isPrivate: false },
+            { members: userId }
+          ]
+        }
       ]
     });
     res.json(rooms);
@@ -118,3 +123,89 @@ router.post("/:roomId/invite", verifyToken, async (req, res) => {
 });
 
 module.exports = router;
+
+// GET /rooms/trash - Fetch deleted rooms for the owner
+router.get("/trash", verifyToken, async (req, res) => {
+  try {
+    const userId = req.user.userid;
+    const rooms = await Room.find({
+      owner: userId,
+      deletedAt: { $ne: null }
+    });
+    res.json(rooms);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Failed to fetch trash" });
+  }
+});
+
+// DELETE /rooms/:roomId - Soft delete a room
+router.delete("/:roomId", verifyToken, async (req, res) => {
+  try {
+    const { roomId } = req.params;
+    const room = await Room.findById(roomId);
+
+    if (!room) return res.status(404).json({ error: "Room not found" });
+
+    if (room.owner.toString() !== req.user.userid) {
+      return res.status(403).json({ error: "Only the owner can delete the room" });
+    }
+
+    room.deletedAt = new Date();
+    await room.save();
+
+    req.io.emit("room_deleted", { roomId }); // Notify everyone to remove from list
+
+    res.json({ message: "Room moved to trash" });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Failed to delete room" });
+  }
+});
+
+// POST /rooms/:roomId/restore - Restore a deleted room
+router.post("/:roomId/restore", verifyToken, async (req, res) => {
+  try {
+    const { roomId } = req.params;
+    const room = await Room.findById(roomId);
+
+    if (!room) return res.status(404).json({ error: "Room not found" });
+
+    if (room.owner.toString() !== req.user.userid) {
+      return res.status(403).json({ error: "Only the owner can restore the room" });
+    }
+
+    room.deletedAt = null;
+    await room.save();
+
+    // Notify relevant users (Public or Members) that room is back
+    // Simplest approach: Just emit 'room_created' effectively re-adding it
+    req.io.emit("room_created", room);
+
+    res.json({ message: "Room restored" });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Failed to restore room" });
+  }
+});
+
+// DELETE /rooms/:roomId/permanent - Permanently delete a room
+router.delete("/:roomId/permanent", verifyToken, async (req, res) => {
+  try {
+    const { roomId } = req.params;
+    const room = await Room.findById(roomId);
+
+    if (!room) return res.status(404).json({ error: "Room not found" });
+
+    if (room.owner.toString() !== req.user.userid) {
+      return res.status(403).json({ error: "Only the owner can delete the room" });
+    }
+
+    await Room.deleteOne({ _id: roomId });
+
+    res.json({ message: "Room deleted permanently" });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Failed to delete room permanently" });
+  }
+});
