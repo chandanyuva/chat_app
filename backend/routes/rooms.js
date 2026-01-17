@@ -1,3 +1,4 @@
+const mongoose = require("mongoose");
 const express = require("express");
 const router = express.Router();
 const Room = require("../models/Room");
@@ -5,26 +6,109 @@ const User = require("../models/User");
 const verifyToken = require("../middleware/authMiddleware");
 const logger = require("../utils/logger");
 
-// GET /rooms - Fetch all rooms (Protected)
-// Return all Public rooms OR Private rooms where the user is a member
+// GET /rooms - Fetch all rooms with unread counts (Protected)
 router.get("/", verifyToken, async (req, res) => {
   try {
-    const userId = req.user.userid;
-    const rooms = await Room.find({
-      $and: [
-        { deletedAt: null },
-        {
+    // Current user ID
+    const userId = new mongoose.Types.ObjectId(req.user.userid);
+
+    // Fetch the user to get their lastRead map
+    // We need this map to compare against message timestamps
+    const userDoc = await User.findById(userId).select("lastRead");
+    const lastReadMap = userDoc ? userDoc.lastRead : new Map();
+
+    const rooms = await Room.aggregate([
+      // 1. Match rooms: Not deleted AND (Public OR Member)
+      {
+        $match: {
+          deletedAt: null,
           $or: [
             { isPrivate: false },
             { members: userId }
           ]
         }
-      ]
-    });
-    res.json(rooms);
+      },
+      // 2. Lookup Messages to count unread
+      {
+        $lookup: {
+          from: "messages",
+          let: {
+            roomIdStr: { $toString: "$_id" } // Message.roomId is a String
+          },
+          pipeline: [
+            {
+              $match: {
+                $expr: {
+                  $eq: ["$roomId", "$$roomIdStr"]
+                }
+              }
+            },
+            // We only need timestamps for counting
+            { $project: { timestamp: 1 } }
+          ],
+          as: "messages"
+        }
+      },
+      // 3. Project / Calculate Unread
+      {
+        $project: {
+          name: 1,
+          isPrivate: 1,
+          owner: 1,
+          members: 1,
+          createdAt: 1,
+          updatedAt: 1
+        }
+      }
+    ]);
+
+    // OPTIMIZATION: 2nd Query to get message counts
+    // We iterate and run `countDocuments` concurrently.
+    const roomsWithCounts = await Promise.all(rooms.map(async (room) => {
+      const roomId = room._id.toString();
+      const lastRead = lastReadMap.get(roomId) || new Date(0); // Default to epoch
+
+      const count = await mongoose.model("Message").countDocuments({
+        roomId: roomId,
+        timestamp: { $gt: lastRead }
+      });
+
+      return {
+        ...room, // room is a POJO from aggregation
+        unreadCount: count
+      };
+    }));
+
+    res.json(roomsWithCounts);
+
   } catch (err) {
     logger.error("Fetch Rooms Error:", err);
     res.status(500).json({ error: "Failed to fetch rooms" });
+  }
+});
+
+// POST /rooms/:roomId/read - Mark room as read
+router.post("/:roomId/read", verifyToken, async (req, res) => {
+  try {
+    const { roomId } = req.params;
+    const userId = req.user.userid;
+
+    const user = await User.findById(userId);
+    if (!user) return res.status(404).json({ error: "User not found" });
+
+    // Update the Map
+    // Ensure lastRead is initialized (if migrating old users)
+    if (!user.lastRead) {
+      user.lastRead = new Map();
+    }
+
+    user.lastRead.set(roomId, new Date());
+    await user.save();
+
+    res.json({ success: true });
+  } catch (err) {
+    logger.error("Mark Read Error:", err);
+    res.status(500).json({ error: "Failed to mark room as read" });
   }
 });
 
@@ -98,7 +182,7 @@ router.post("/:roomId/invite", verifyToken, async (req, res) => {
     );
 
     if (alreadyInvited) {
-       return res.status(400).json({ error: "User has already been invited" });
+      return res.status(400).json({ error: "User has already been invited" });
     }
 
     // Add invitation
@@ -115,7 +199,7 @@ router.post("/:roomId/invite", verifyToken, async (req, res) => {
       roomId: room._id,
       roomName: room.name,
       inviterId: req.user.userid,
-      inviterName: req.user.username 
+      inviterName: req.user.username
     });
 
     res.json({ message: "Invitation sent successfully" });
@@ -126,7 +210,6 @@ router.post("/:roomId/invite", verifyToken, async (req, res) => {
   }
 });
 
-module.exports = router;
 
 // GET /rooms/trash - Fetch deleted rooms for the owner
 router.get("/trash", verifyToken, async (req, res) => {
@@ -157,7 +240,7 @@ router.delete("/:roomId", verifyToken, async (req, res) => {
 
     room.deletedAt = new Date();
     await room.save();
-    
+
     logger.info(`Room soft-deleted: ${room.name} by ${req.user.username}`);
 
     req.io.emit("room_deleted", { roomId }); // Notify everyone to remove from list
@@ -210,7 +293,7 @@ router.delete("/:roomId/permanent", verifyToken, async (req, res) => {
     }
 
     await Room.deleteOne({ _id: roomId });
-    
+
     logger.info(`Room permanently deleted: ${room.name} by ${req.user.username}`);
 
     res.json({ message: "Room deleted permanently" });
@@ -219,3 +302,4 @@ router.delete("/:roomId/permanent", verifyToken, async (req, res) => {
     res.status(500).json({ error: "Failed to delete room permanently" });
   }
 });
+module.exports = router;

@@ -114,11 +114,19 @@ function App() {
         if (res.ok) {
           setRoomList(data);
           setLoadingRooms(false);
-          if (data.length > 0) {
-            setSelectedRoomId(data[0]._id);
-          } else {
-            setSelectedRoomId("");
-          }
+
+          // Initialize unread counts from the response
+          const initialCounts = {};
+          data.forEach(room => {
+            if (room.unreadCount > 0) {
+              initialCounts[room._id] = room.unreadCount;
+            }
+          });
+          setUnreadCounts(initialCounts);
+
+          // Default to NO room selected (Show Welcome Screen)
+          setSelectedRoomId("");
+          
         } else {
           logger.error("Room Load Error:", data.error);
         }
@@ -297,10 +305,20 @@ function App() {
   function onSelectRoomHandler(id) {
     // logger.debug(`clicked on ${id}`);
     setSelectedRoomId(id);
+    
+    // Reset local unread count
     setUnreadCounts((prev) => ({
       ...prev,
       [id]: 0
     }));
+
+    // Mark as read in backend
+    if (token) {
+      fetch(`${BACKEND_URL}/rooms/${id}/read`, {
+        method: "POST",
+        headers: { "Authorization": `Bearer ${token}` }
+      }).catch(err => logger.error("Failed to mark room as read", err));
+    }
   };
 
   // SignUp Handler

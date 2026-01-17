@@ -26,7 +26,12 @@ const UserSchema = new mongoose.Schema({
       type: mongoose.Schema.Types.ObjectId,
       ref: "User"
     }
-  }]
+  }],
+  lastRead: {
+    type: Map,
+    of: Date,
+    default: {}
+  }
 }, { timestamps: true });
 
 module.exports = mongoose.model("User", UserSchema);
