@@ -18,6 +18,7 @@ function App() {
   const [selectedRoomId, setSelectedRoomId] = useState("");
   const [loadingRooms, setLoadingRooms] = useState(true);
   const [roomList, setRoomList] = useState([]);
+  const [unreadCounts, setUnreadCounts] = useState({});
   const [messages, setMessages] = useState({});
   const [isCreateRoomModalOpen, setIsCreateRoomModalOpen] = useState(false);
   const [isInvitationModalOpen, setIsInvitationModalOpen] = useState(false);
@@ -202,6 +203,15 @@ function App() {
     
     newSocket.on("chat_message", ({ roomId, message, senderId, timestamp }) => {
       logger.info("Incoming Message:", timestamp, roomId, senderId, message);
+      
+      // If we are NOT in the room where the message came from, increment unread count
+      if (selectedRoomIdRef.current !== roomId) {
+        setUnreadCounts((prev) => ({
+          ...prev,
+          [roomId]: (prev[roomId] || 0) + 1
+        }));
+      }
+
       setMessages((prev) => {
         return {
           ...prev,
@@ -287,6 +297,10 @@ function App() {
   function onSelectRoomHandler(id) {
     // logger.debug(`clicked on ${id}`);
     setSelectedRoomId(id);
+    setUnreadCounts((prev) => ({
+      ...prev,
+      [id]: 0
+    }));
   };
 
   // SignUp Handler
@@ -549,7 +563,8 @@ function App() {
               roomList={roomList} 
               selectedRoomId={selectedRoomId} 
               onSelectRoom={onSelectRoomHandler} 
-              onCreateRoom={() => setIsCreateRoomModalOpen(true)} 
+              onCreateRoom={() => setIsCreateRoomModalOpen(true)}
+              unreadCounts={unreadCounts} 
             />
           )}
           {!selectedRoomId ? (
